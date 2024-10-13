@@ -1,8 +1,6 @@
 'use client'
 import Link from "next/link";
 
-import { Address } from "@/components/Address";
-import BackButton from "@/components/BackButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowRight, InfoIcon, Package, UserCircle } from "lucide-react";
@@ -10,9 +8,6 @@ import LinkButton from "@/components/LinkButton";
 import { useState } from "react";
 
 export default function Home() {
-  const [pickup, setPickUp] = useState<Address | null>(null);
-  const [delivery, setDelivery] = useState<Address | null>(null);
-
   return (
     <div className="min-h-screen bg-gray-100 p-4">
       <Card className="max-w-md mx-auto">
