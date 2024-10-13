@@ -6,8 +6,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { ArrowRight, InfoIcon, Package, UserCircle } from "lucide-react";
 import LinkButton from "@/components/LinkButton";
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 
 export default function Home() {
+  const { data: session, status } = useSession()
   return (
     <div className="min-h-screen bg-gray-100 p-4">
       <Card className="max-w-md mx-auto">
@@ -17,11 +19,15 @@ export default function Home() {
               <Package className="inline" /> Teleport
             </CardTitle>
             <Button onClick={null} variant="ghost" className="flex items-center gap-4">
-              <span className="font-bold">
-                {"Username"}
-              </span>
+              <div className="text-right">
+                <p className="font-bold">
+                  {status === "loading" ? "Loading..." : session?.user.name}
+                </p>
+                <p className="capitalize bg-blue-500 text-white rounded-xl w-fit px-4">
+                  {String(session?.user.role).toLowerCase()}
+                </p>
+              </div>
               <UserCircle />
-              <span className="sr-only">Go back</span>
             </Button>
           </div>
           <CardDescription className="text-sm text-gray-600">

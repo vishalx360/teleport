@@ -5,6 +5,8 @@ import { type Metadata } from "next";
 
 import { TRPCReactProvider } from "@/trpc/react";
 import { Toaster } from "@/components/ui/sonner";
+import { SessionProvider } from "next-auth/react";
+import Providers from "@/context/Providers";
 
 export const metadata: Metadata = {
   title: "Create T3 App",
@@ -18,10 +20,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${GeistSans.variable}`}>
       <body>
-        <TRPCReactProvider>
+        <Providers>
           {children}
           <Toaster />
-        </TRPCReactProvider>
+        </Providers>
       </body>
     </html>
   );

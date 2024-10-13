@@ -5,9 +5,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Package } from "lucide-react"
 import { useState } from "react"
 import { Icons } from "@/components/icons"
+import { signIn } from "next-auth/react"
 
 export default function LoginPage() {
     const [isLoading, setIsLoading] = useState<boolean>(false)
+
+    function handleGithubLogin() {
+        console.log("Github login clicked");
+        setIsLoading(true);
+        signIn("github", { callbackUrl: "/" });
+        // after 5 seconds, set isLoading to false
+        setTimeout(() => {
+            setIsLoading(false);
+        }, 5000);
+    }
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
@@ -23,14 +34,15 @@ export default function LoginPage() {
                 <CardContent className="">
                     <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
                         <Button variant="default"
+                            onClick={handleGithubLogin}
                             className="rounded-xl flex items-center justify-center gap-3 font-bold  p-4 px-5 h-auto w-full bg-blue-500 text-white hover:bg-blue-600 transition-colors hover:text-white"
                             type="button" disabled={isLoading}>
                             {isLoading ? (
                                 <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
                             ) : (
-                                <Icons.google className="mr-2 h-4 w-4" />
+                                <Icons.gitHub className="mr-2 h-4 w-4" />
                             )}{" "}
-                            Continue with Google
+                            Continue with Github
                         </Button>                        <p className="px-8 text-center text-sm text-muted-foreground">
                             By clicking continue, you agree to our{" "}
                             <Link
