@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
+import { vehicles } from '@/lib/constants'
 import { ArrowRight, Clock } from "lucide-react"
-import { vehicles } from '../booking/page'
 
 // Default values for props
 const defaultCheckoutData = {

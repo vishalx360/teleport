@@ -5,52 +5,11 @@ import BackButton from "@/components/BackButton"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Address } from "@prisma/client"
-import { AlertTriangle, BikeIcon, Clock, DollarSign, Info, Package, Truck } from "lucide-react"
+import useBookingStore from "@/context/BookingStore"
+import { vehicles } from "@/lib/constants"
+import { AlertTriangle, Clock, DollarSign, Info, Package } from "lucide-react"
 import Link from "next/link"
-import { useState } from 'react'
 import MapView from "./MapView"
-
-type Vehicle = {
-    name: string;
-    icon: React.ReactNode;
-    price: number;
-    perKmCost: number;
-    capacity: string;
-    dimensions: string;
-    weightLimit: string;
-}
-
-export const vehicles: Vehicle[] = [
-    {
-        name: "Bike",
-        icon: <BikeIcon className="h-8 w-8" />,
-        price: 200,
-        perKmCost: 20,
-        capacity: "1 cubic meter",
-        dimensions: "1.8m x 0.8m x 1.1m",
-        weightLimit: "150 kg"
-    },
-    {
-        name: "Mini-Truck",
-        icon: <Truck className="h-8 w-8" />,
-        price: 800,
-        perKmCost: 50,
-        capacity: "7-8 cubic meters",
-        dimensions: "3.5m x 2m x 2m",
-        weightLimit: "2000 kg"
-    },
-]
-
-interface BookingPageProps {
-    estimatedPickupTime: string;
-    distance: number;
-}
-
-const defaultValues: BookingPageProps = {
-    estimatedPickupTime: "in 9 mins",
-    distance: 2,
-}
 
 // Safety Info Component
 const SafetyInfo = () => (
@@ -80,83 +39,84 @@ const SafetyInfo = () => (
 );
 
 // Vehicle Selection Component
-const VehicleSelection = ({ vehicles, selectedVehicle, setSelectedVehicle }) => (
-    <div className="space-y-4">
-        <h3 className="font-semibold">Available Vehicles</h3>
-        {vehicles.map((vehicle) => (
-            <label key={vehicle.name} className="block cursor-pointer">
-                <div
-                    className={`flex items-center justify-between p-3 border rounded-lg ${selectedVehicle.name === vehicle.name ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
-                        }`}
-                    onClick={() => setSelectedVehicle(vehicle)}
-                >
-                    <div className="flex items-center space-x-3">
-                        <input
-                            type="radio"
-                            name="vehicle"
-                            value={vehicle.name}
-                            checked={selectedVehicle.name === vehicle.name}
-                            onChange={() => setSelectedVehicle(vehicle)}
-                            className="form-radio text-blue-600 hidden"
-                        />
-                        {vehicle.icon}
-                        <div>
-                            <h4 className="font-medium">{vehicle.name}</h4>
-                            <p className="text-sm text-gray-600">Weight Limit: {vehicle.weightLimit}</p>
+const VehicleSelection = () => {
+    const { distance, setSelectedVehicle, selectedVehicle } = useBookingStore();
+    return (
+        <div className="space-y-4">
+            <h3 className="font-semibold">Available Vehicles</h3>
+            {vehicles.map((vehicle) => (
+                <label key={vehicle.name} className="block cursor-pointer">
+                    <div
+                        className={`flex items-center justify-between p-3 border rounded-lg ${selectedVehicle?.name === vehicle.name ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+                            }`}
+                        onClick={() => setSelectedVehicle(vehicle)}
+                    >
+                        <div className="flex items-center space-x-3">
+                            <input
+                                type="radio"
+                                name="vehicle"
+                                value={vehicle.name}
+                                checked={selectedVehicle?.name === vehicle.name}
+                                onChange={() => setSelectedVehicle(vehicle)}
+                                className="form-radio text-blue-600 hidden"
+                            />
+                            {vehicle.icon}
+                            <div>
+                                <h4 className="font-medium">{vehicle.name}</h4>
+                                <p className="text-sm text-gray-600">Weight Limit: {vehicle.weightLimit}</p>
+                                <p className="text-sm">₹{vehicle.perKmCost}/Km</p>
+                            </div>
+                        </div>
+                        <div className="text-right">
+                            <p className="font-semibold">₹{vehicle.perKmCost * distance}</p>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant="ghost" size="sm">
+                                        <Info className="h-4 w-4" />
+                                        <span className="sr-only">Vehicle information</span>
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-80">
+                                    <div className="space-y-2">
+                                        <h5 className="font-semibold">{vehicle.name} Details</h5>
+                                        <p className="text-sm">Capacity: {vehicle.capacity}</p>
+                                        <p className="text-sm">Dimensions: {vehicle.dimensions}</p>
+                                        <p className="text-sm">Weight Limit: {vehicle.weightLimit}</p>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
                         </div>
                     </div>
-                    <div className="text-right">
-                        <p className="font-semibold">₹{vehicle.perKmCost}/Km</p>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                    <Info className="h-4 w-4" />
-                                    <span className="sr-only">Vehicle information</span>
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-80">
-                                <div className="space-y-2">
-                                    <h5 className="font-semibold">{vehicle.name} Details</h5>
-                                    <p className="text-sm">Capacity: {vehicle.capacity}</p>
-                                    <p className="text-sm">Dimensions: {vehicle.dimensions}</p>
-                                    <p className="text-sm">Weight Limit: {vehicle.weightLimit}</p>
-                                </div>
-                            </PopoverContent>
-                        </Popover>
-                    </div>
-                </div>
-            </label>
-        ))}
-    </div>
-);
+                </label>
+            ))}
+        </div>
+    )
+};
 
 // Estimated Fare Component
-const EstimatedFare = ({ selectedVehicle, distance }) => (
-    <div className="bg-green-50 p-3 rounded-lg space-y-4">
-        {selectedVehicle && (
-            <div>
-                <div className="flex items-center justify-between">
-                    <h3 className="font-semibold">Estimated Base Price</h3>
-                    <p className="text-lg font-bold text-green-700">₹{selectedVehicle.perKmCost * distance}</p>
+const EstimatedFare = () => {
+    const { distance, selectedVehicle } = useBookingStore();
+
+    return (
+        <div className="bg-green-50 p-3 rounded-lg space-y-4">
+            {selectedVehicle && (
+                <div>
+                    <div className="flex items-center justify-between">
+                        <h3 className="font-semibold">Estimated Base Price</h3>
+                        <p className="text-lg font-bold text-green-700">₹{selectedVehicle.perKmCost * distance}</p>
+                    </div>
+                    <p className="text-sm text-gray-600">Based on {distance} km distance</p>
+                    <p className="text-sm text-gray-600">
+                        *Without taxes, service and surge charge
+                    </p>
                 </div>
-                <p className="text-sm text-gray-600">Based on {distance} km distance</p>
-                <p className="text-sm text-gray-600">
-                    *Without taxes and service charge
-                </p>
-            </div>
-        )}
-    </div>
-);
+            )}
+        </div>
+    )
+};
 
-export default function BookingPage({
-    estimatedPickupTime = defaultValues.estimatedPickupTime,
-    distance = defaultValues.distance
-
-}: BookingPageProps = defaultValues
-) {
-    const [selectedVehicle, setSelectedVehicle] = useState<Vehicle>(vehicles[0]) // Set default vehicle here
-    const [pickupAddress, setPickUpAddress] = useState<Address | null>(null);
-    const [deliveryAddress, setDeliveryAddress] = useState<Address | null>(null);
+export default function BookingPage() {
+    const { pickupAddress, deliveryAddress, setPickUpAddress, setDeliveryAddress } = useBookingStore();
 
     return (
         <div className="min-h-screen bg-gray-100 p-4">
@@ -175,28 +135,21 @@ export default function BookingPage({
                     {!pickupAddress || !deliveryAddress ?
                         <SafetyInfo />
                         : <>
-                            {/* Map View */}
                             <MapView
                                 pickupLocation={pickupAddress}
                                 deliveryLocation={deliveryAddress}
                             />
-                            {/* Vehicle Selection */}
-                            <VehicleSelection
-                                vehicles={vehicles}
-                                selectedVehicle={selectedVehicle}
-                                setSelectedVehicle={setSelectedVehicle}
-                            />
-                            {/* Estimated Fare */}
-                            <EstimatedFare selectedVehicle={selectedVehicle} distance={distance} />
+                            <VehicleSelection />
+                            <EstimatedFare />
                         </>
                     }
                 </CardContent>
                 <CardFooter>
-                    <Button className="w-full" disabled={!pickupAddress || !deliveryAddress}>
-                        <Link href="/checkout" passHref>
+                    <Link className="w-full" href="/checkout" passHref>
+                        <Button className="w-full" disabled={!pickupAddress || !deliveryAddress}>
                             Book Now
-                        </Link>
-                    </Button>
+                        </Button>
+                    </Link>
                 </CardFooter>
             </Card>
         </div>
