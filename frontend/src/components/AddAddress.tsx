@@ -7,14 +7,16 @@ import { toast } from "sonner";
 import MapPicker from "./MapPicker";
 
 export const AddAddress = () => {
-    const { mutateAsync } = api.user.saveAddress.useMutation();
+    const utils = api.useUtils();
+    const { mutateAsync, isPending } = api.user.saveAddress.useMutation();
     const [open, setOpen] = useState(false);
 
     async function onSubmit(data) {
         try {
             // Call the tRPC mutation to save the address
-            await mutateAsync(data).then((res) => {
+            await mutateAsync(data).then(async (res) => {
                 toast.success(res.message);
+                await utils.user.getAddresses.refetch();
                 setOpen(false);
             }).catch((error) => {
                 console.error('Error saving address:', error);
@@ -40,7 +42,7 @@ export const AddAddress = () => {
                     <DialogTitle>Add Address</DialogTitle>
                 </DialogHeader>
                 <div className="w-full h-full">
-                    <MapPicker onSubmit={onSubmit} />
+                    <MapPicker isPending={isPending} onSubmit={onSubmit} />
                 </div>
             </DialogContent>
         </Dialog>

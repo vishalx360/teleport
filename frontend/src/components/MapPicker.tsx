@@ -11,7 +11,7 @@ const DEFAULT_LATITUDE = 37.7749;
 const DEFAULT_LONGITUDE = -122.4194;
 const DEFAULT_ZOOM = 12;
 
-const MapPicker = ({ onSubmit }) => {
+const MapPicker = ({ onSubmit, isPending }) => {
     const mapContainerRef = useRef();
     const mapRef = useRef();
     const [selectedLocation, setSelectedLocation] = useState({
@@ -117,6 +117,7 @@ const MapPicker = ({ onSubmit }) => {
                 handleCurrentLocation={handleCurrentLocation}
                 mapLocation={selectedLocation}
                 onSubmit={onSubmit}
+                isPending={isPending}
             />
         </div>
     );

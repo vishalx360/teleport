@@ -8,7 +8,7 @@ import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { locationSchema } from './validationSchema'; // Adjust the import path as necessary
 
-const LocationForm = ({ handleCurrentLocation, mapLocation, onSubmit }) => {
+const LocationForm = ({ handleCurrentLocation, mapLocation, onSubmit, isPending }) => {
     const { control, handleSubmit, setValue, formState: { errors } } = useForm({
         resolver: zodResolver(locationSchema),
         defaultValues: {
@@ -106,6 +106,7 @@ const LocationForm = ({ handleCurrentLocation, mapLocation, onSubmit }) => {
                     </div>
                 </div>
                 <Button
+                    isLoading={isPending}
                     type="submit"
                     disabled={Object.keys(errors).length > 0}
                     className="mt-4 w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 hover:text-white text-white rounded">

@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Address } from "@prisma/client"
-import { AlertTriangle, BikeIcon, Clock, DollarSign, Info, MapPin, Package, Truck } from "lucide-react"
-import Image from "next/image"
+import { AlertTriangle, BikeIcon, Clock, DollarSign, Info, Package, Truck } from "lucide-react"
 import Link from "next/link"
 import { useState } from 'react'
+import MapView from "./MapView"
 
 type Vehicle = {
     name: string;
@@ -77,29 +77,6 @@ const SafetyInfo = () => (
             </div>
         </CardContent>
     </Card>
-);
-
-// Map View Component
-const MapView = ({ pickupLocation, deliveryLocation, distance }) => (
-    <div className="relative h-48 w-full rounded-lg overflow-hidden">
-        <Image
-            src="/map.png"
-            alt="Map showing route between pickup and delivery locations"
-            layout="fill"
-            objectFit="cover"
-        />
-        <div className="absolute top-2 right-2 bg-white px-2 py-1 rounded text-sm font-medium">
-            {distance} kms • 20-25 mins
-        </div>
-        <div className="absolute bottom-2 left-2 bg-white px-2 py-1 rounded text-sm font-medium flex items-center">
-            <MapPin className="h-4 w-4 mr-1 text-blue-500" />
-            {pickupLocation}
-        </div>
-        <div className="absolute bottom-2 right-2 bg-white px-2 py-1 rounded text-sm font-medium flex items-center">
-            <MapPin className="h-4 w-4 mr-1 text-blue-500" />
-            {deliveryLocation}
-        </div>
-    </div>
 );
 
 // Vehicle Selection Component
@@ -200,9 +177,8 @@ export default function BookingPage({
                         : <>
                             {/* Map View */}
                             <MapView
-                                pickupLocation={pickupAddress?.nickname}
-                                deliveryLocation={deliveryAddress?.nickname}
-                                distance={distance}
+                                pickupLocation={pickupAddress}
+                                deliveryLocation={deliveryAddress}
                             />
                             {/* Vehicle Selection */}
                             <VehicleSelection
