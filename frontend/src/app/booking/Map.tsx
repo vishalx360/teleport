@@ -51,7 +51,9 @@ const Map = ({ points }: {
         if (mapRef.current && points.length) {
             // Add markers and fit the map to show them
             addMarkers(points);
-            drawCurvedLine(points);
+            setTimeout(() => {
+                drawCurvedLine(points);
+            }, 1000);
 
         }
     }, [points]);
@@ -113,7 +115,7 @@ const Map = ({ points }: {
                 type: 'LineString',
                 coordinates: [
                     [start.longitude, start.latitude], // Start point
-                    [start.longitude + (end.longitude - start.longitude) / 2, start.latitude + (end.latitude - start.latitude) / 2 + 0.005], // Control point for curve
+                    [start.longitude + (end.longitude - start.longitude) / 2, start.latitude + (end.latitude - start.latitude) / 2 + 0.0007], // Control point for curve
                     [end.longitude, end.latitude], // End point
                 ],
             },
