@@ -1,10 +1,11 @@
 'use client'
 
-import { Address } from "@/components/Address"
+import { AddressPicker } from "@/components/AddressPicker"
 import BackButton from "@/components/BackButton"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Address } from "@prisma/client"
 import { AlertTriangle, BikeIcon, Clock, DollarSign, Info, MapPin, Package, Truck } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -177,8 +178,8 @@ export default function BookingPage({
 }: BookingPageProps = defaultValues
 ) {
     const [selectedVehicle, setSelectedVehicle] = useState<Vehicle>(vehicles[0]) // Set default vehicle here
-    const [pickup, setPickUp] = useState<Address | null>(null);
-    const [delivery, setDelivery] = useState<Address | null>(null);
+    const [pickupAddress, setPickUpAddress] = useState<Address | null>(null);
+    const [deliveryAddress, setDeliveryAddress] = useState<Address | null>(null);
 
     return (
         <div className="min-h-screen bg-gray-100 p-4">
@@ -190,17 +191,17 @@ export default function BookingPage({
                 <CardContent className="space-y-4">
                     {/* Address Input */}
                     <div className="space-y-4">
-                        <Address focused={pickup === null} address={pickup} addressType="pickup" onEdit={setPickUp} />
-                        <Address focused={pickup !== null && delivery === null} address={delivery} addressType="delivery" onEdit={setDelivery} />
+                        <AddressPicker focused={pickupAddress === null} address={pickupAddress} addressType="pickup" updateAddress={setPickUpAddress} />
+                        <AddressPicker focused={pickupAddress !== null && deliveryAddress === null} address={deliveryAddress} addressType="delivery" updateAddress={setDeliveryAddress} />
                     </div>
                     {/* Safety Info */}
-                    {!pickup || !delivery ?
+                    {!pickupAddress || !deliveryAddress ?
                         <SafetyInfo />
                         : <>
                             {/* Map View */}
                             <MapView
-                                pickupLocation={pickup?.location}
-                                deliveryLocation={delivery?.location}
+                                pickupLocation={pickupAddress?.nickname}
+                                deliveryLocation={deliveryAddress?.nickname}
                                 distance={distance}
                             />
                             {/* Vehicle Selection */}
@@ -215,7 +216,7 @@ export default function BookingPage({
                     }
                 </CardContent>
                 <CardFooter>
-                    <Button className="w-full" disabled={!pickup || !delivery}>
+                    <Button className="w-full" disabled={!pickupAddress || !deliveryAddress}>
                         <Link href="/checkout" passHref>
                             Book Now
                         </Link>

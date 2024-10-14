@@ -1,11 +1,11 @@
 "use client"
-import Link from "next/link"
+import { Icons } from "@/components/icons"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Package } from "lucide-react"
-import { useState } from "react"
-import { Icons } from "@/components/icons"
 import { signIn } from "next-auth/react"
+import Link from "next/link"
+import { useState } from "react"
 
 export default function LoginPage() {
     const [isLoading, setIsLoading] = useState<boolean>(false)

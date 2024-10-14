@@ -1,12 +1,12 @@
 'use client'
 import Link from "next/link";
 
+import LinkButton from "@/components/LinkButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowRight, InfoIcon, Package, UserCircle } from "lucide-react";
-import LinkButton from "@/components/LinkButton";
-import { useState } from "react";
 import { useSession } from "next-auth/react";
+import { useState } from "react";
 
 export default function Home() {
   const { data: session, status } = useSession()

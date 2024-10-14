@@ -4,7 +4,7 @@ import BackButton from "@/components/BackButton"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { ArrowLeft, MessageSquare, Phone, RefreshCw } from "lucide-react"
+import { MessageSquare, Phone, RefreshCw } from "lucide-react"
 import Image from "next/image"
 import { useEffect, useState } from 'react'
 import TimeAgo from 'react-timeago'

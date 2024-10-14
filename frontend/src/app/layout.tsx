@@ -3,9 +3,7 @@ import "@/styles/globals.css";
 import { GeistSans } from "geist/font/sans";
 import { type Metadata } from "next";
 
-import { TRPCReactProvider } from "@/trpc/react";
 import { Toaster } from "@/components/ui/sonner";
-import { SessionProvider } from "next-auth/react";
 import Providers from "@/context/Providers";
 
 export const metadata: Metadata = {
@@ -21,8 +19,8 @@ export default function RootLayout({
     <html lang="en" className={`${GeistSans.variable}`}>
       <body>
         <Providers>
-          {children}
           <Toaster />
+          {children}
         </Providers>
       </body>
     </html>
