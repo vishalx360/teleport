@@ -7,6 +7,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { locationSchema } from './validationSchema';
+import { Location } from './MapPicker';
 
 const LocationForm = ({
     handleCurrentLocation,
@@ -16,11 +17,7 @@ const LocationForm = ({
 }:
     {
         handleCurrentLocation: () => void;
-        mapLocation: {
-            address: string;
-            latitude: null;
-            longitude: null;
-        };
+        mapLocation: Location;
         onSubmit: () => void;
         isPending: boolean;
     }

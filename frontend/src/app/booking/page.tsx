@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import useBookingStore from "@/context/BookingStore"
-import { vehicles } from "@/lib/constants"
+import { vehicleIconMap, vehicles } from "@/lib/constants"
 import { AlertTriangle, Clock, DollarSign, Info, Package } from "lucide-react"
 import Link from "next/link"
 import MapView from "./MapView"
@@ -46,58 +46,62 @@ const VehicleSelection = () => {
     return (
         <div className="space-y-4">
             <h3 className="font-semibold">Available Vehicles</h3>
-            {vehicles.map((vehicle) => (
-                <label key={vehicle.name} className="block cursor-pointer">
-                    <div
-                        className={`flex items-center justify-between p-3 border rounded-lg ${selectedVehicle?.name === vehicle.name ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
-                            }`}
-                        onClick={() => setSelectedVehicle(vehicle)}
-                    >
-                        <div className="flex items-center space-x-3">
-                            <input
-                                type="radio"
-                                name="vehicle"
-                                value={vehicle.name}
-                                checked={selectedVehicle?.name === vehicle.name}
-                                onChange={() => setSelectedVehicle(vehicle)}
-                                className="form-radio text-blue-600 hidden"
-                            />
-                            {vehicle.icon}
-                            <div>
-                                <h4 className="font-medium">{vehicle.name}</h4>
-                                <p className="text-sm text-gray-600">Weight Limit: {vehicle.weightLimit}</p>
-                                <p className="text-sm">₹{vehicle.perKmCost}/Km</p>
+            {vehicles.map((vehicle) => {
+                const VehicleIcon = vehicleIconMap[vehicle?.name];
+
+                return (
+                    <label key={vehicle.name} className="block cursor-pointer">
+                        <div
+                            className={`flex items-center justify-between p-3 border rounded-lg ${selectedVehicle?.name === vehicle.name ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+                                }`}
+                            onClick={() => setSelectedVehicle(vehicle)}
+                        >
+                            <div className="flex items-center space-x-3">
+                                <input
+                                    type="radio"
+                                    name="vehicle"
+                                    value={vehicle.name}
+                                    checked={selectedVehicle?.name === vehicle.name}
+                                    onChange={() => setSelectedVehicle(vehicle)}
+                                    className="form-radio text-blue-600 hidden"
+                                />
+                                {VehicleIcon}
+                                <div>
+                                    <h4 className="font-medium">{vehicle.name}</h4>
+                                    <p className="text-sm text-gray-600">Weight Limit: {vehicle.weightLimit}</p>
+                                    <p className="text-sm">₹{vehicle.perKmCost}/Km</p>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                {
+                                    calculating ?
+
+                                        <Skeleton className="h-4 w-[250px]" />
+
+                                        :
+                                        <p className="font-semibold">₹{(vehicle.perKmCost * distance).toFixed(2)}</p>
+                                }
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="ghost" size="sm">
+                                            <Info className="h-4 w-4" />
+                                            <span className="sr-only">Vehicle information</span>
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-80">
+                                        <div className="space-y-2">
+                                            <h5 className="font-semibold">{vehicle.name} Details</h5>
+                                            <p className="text-sm">Capacity: {vehicle.capacity}</p>
+                                            <p className="text-sm">Dimensions: {vehicle.dimensions}</p>
+                                            <p className="text-sm">Weight Limit: {vehicle.weightLimit}</p>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </div>
-                        <div className="text-right">
-                            {
-                                calculating ?
-
-                                    <Skeleton className="h-4 w-[250px]" />
-
-                                    :
-                                    <p className="font-semibold">₹{(vehicle.perKmCost * distance).toFixed(2)}</p>
-                            }
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button variant="ghost" size="sm">
-                                        <Info className="h-4 w-4" />
-                                        <span className="sr-only">Vehicle information</span>
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-80">
-                                    <div className="space-y-2">
-                                        <h5 className="font-semibold">{vehicle.name} Details</h5>
-                                        <p className="text-sm">Capacity: {vehicle.capacity}</p>
-                                        <p className="text-sm">Dimensions: {vehicle.dimensions}</p>
-                                        <p className="text-sm">Weight Limit: {vehicle.weightLimit}</p>
-                                    </div>
-                                </PopoverContent>
-                            </Popover>
-                        </div>
-                    </div>
-                </label>
-            ))}
+                    </label>
+                )
+            })}
         </div>
     )
 };
@@ -105,14 +109,16 @@ const VehicleSelection = () => {
 // Estimated Fare Component
 const EstimatedFare = () => {
     const { distance, selectedVehicle } = useBookingStore();
-
+    if (!selectedVehicle) return null;
+    const price = selectedVehicle.perKmCost * distance;
+    const formattedPrice = `₹${price.toFixed(2)}`
     return (
         <div className="bg-green-50 p-3 rounded-lg space-y-4">
             {selectedVehicle && (
                 <div>
                     <div className="flex items-center justify-between">
                         <h3 className="font-semibold">Estimated Base Price</h3>
-                        <p className="text-lg font-bold text-green-700">₹{selectedVehicle.perKmCost * distance}</p>
+                        <p className="text-lg font-bold text-green-700">{formattedPrice}</p>
                     </div>
                     <p className="text-sm text-gray-600">Based on {distance} km distance</p>
                     <p className="text-sm text-gray-600">

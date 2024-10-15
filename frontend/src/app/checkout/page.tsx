@@ -57,9 +57,9 @@ export default function CheckoutPage({
     const discount = price * (discountPercentage / 100);
     const finalPrice = price - discount;
 
-    const formattedPrice = price.toFixed(2);
-    const formattedDiscount = discount.toFixed(2);
-    const formattedFinalPrice = finalPrice.toFixed(2);
+    const formattedPrice = `₹${price.toFixed(2)}`
+    const formattedDiscount = `₹${discount.toFixed(2)}`
+    const formattedFinalPrice = `₹${finalPrice.toFixed(2)}`;
 
     const VehicleIcon = vehicleIconMap[selectedVehicle.name];
     return (
@@ -73,8 +73,8 @@ export default function CheckoutPage({
                     <div className="bg-green-50 p-4 rounded-lg">
                         <h2 className="text-xl font-semibold">To Pay</h2>
                         <div className="flex items-center justify-between mt-2">
-                            <span className="text-3xl font-bold">₹{formattedFinalPrice}</span>
-                            <span className="text-green-600 font-medium">You save ₹{formattedDiscount}</span>
+                            <span className="text-3xl font-bold">{formattedFinalPrice}</span>
+                            <span className="text-green-600 font-medium">You save {formattedDiscount}</span>
                         </div>
                     </div>
 
@@ -106,7 +106,7 @@ export default function CheckoutPage({
                                 </div>
                             </div>
                             <div className='justify-self-end'>
-                                <p className="text-lg font-bold text-green-700">₹{formattedPrice}</p>
+                                <p className="text-lg font-bold text-green-700">{formattedPrice}</p>
                             </div>
                         </div>
                     </Card>
@@ -117,15 +117,15 @@ export default function CheckoutPage({
                         <div className="space-y-1 text-sm">
                             <div className="flex justify-between">
                                 <span>Delivery Fee for {distance} kms</span>
-                                <span>₹{formattedPrice}</span>
+                                <span>{formattedPrice}</span>
                             </div>
                             <div className="flex justify-between text-green-600">
                                 <span>{discountPercentage}% Discount</span>
-                                <span>-₹{formattedDiscount}</span>
+                                <span>-{formattedDiscount}</span>
                             </div>
                             <div className="flex justify-between font-semibold pt-2">
                                 <span>To Pay</span>
-                                <span>₹{
+                                <span>{
                                     formattedFinalPrice
                                 }</span>
                             </div>
@@ -140,7 +140,7 @@ export default function CheckoutPage({
                 </CardContent>
                 <CardFooter>
                     <Button className="w-full bg-blue-500 hover:bg-blue-600 text-white py-6 text-lg">
-                        Make Payment | ₹{formattedFinalPrice}
+                        Make Payment | {formattedFinalPrice}
                     </Button>
                 </CardFooter>
             </Card>

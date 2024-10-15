@@ -122,14 +122,14 @@ const Map = ({ points }: {
         };
 
         // Add the line layer to the map
-        if (mapRef.current.getSource('curved-line')) {
-            mapRef.current.getSource('curved-line').setData(lineGeoJSON);
+        if (mapRef.current?.getSource('curved-line')) {
+            mapRef.current?.getSource('curved-line').setData(lineGeoJSON);
         } else {
-            mapRef.current.addSource('curved-line', {
+            mapRef.current?.addSource('curved-line', {
                 type: 'geojson',
                 data: lineGeoJSON,
             });
-            mapRef.current.addLayer({
+            mapRef.current?.addLayer({
                 id: 'curved-line',
                 type: 'line',
                 source: 'curved-line',
