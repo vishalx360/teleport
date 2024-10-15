@@ -13,3 +13,7 @@ export const locationSchema = z.object({
 export const locationModalSchema = locationSchema.extend({
     id: z.string(),
 });
+
+export const userRoleSchema = z.object({
+    role: z.enum(["USER", "DRIVER"]),
+});

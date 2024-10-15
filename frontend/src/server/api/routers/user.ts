@@ -1,12 +1,37 @@
 import { z } from "zod";
 
-import { locationModalSchema, locationSchema } from "@/components/validationSchema";
+import { locationModalSchema, locationSchema, userRoleSchema } from "@/components/validationSchema";
 import {
   createTRPCRouter,
   protectedProcedure,
 } from "@/server/api/trpc";
+import { TRPCError } from "@trpc/server";
 
 export const userRouter = createTRPCRouter({
+  setRole: protectedProcedure
+    .input(userRoleSchema)
+    .mutation(async ({ ctx, input }) => {
+      const user = await ctx.db.user.findUnique({
+        where: {
+          id: ctx.session.user.id,
+        },
+      });
+      if (!user) {
+        return { message: "User not found" };
+      }
+      if (user.role !== null) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Role already set" });
+      }
+      await ctx.db.user.update({
+        where: {
+          id: ctx.session.user.id,
+        },
+        data: {
+          role: input.role,
+        },
+      });
+      return { message: "Role updated successfully" };
+    }),
   saveAddress: protectedProcedure
     .input(locationSchema)
     .mutation(async ({ ctx, input }) => {

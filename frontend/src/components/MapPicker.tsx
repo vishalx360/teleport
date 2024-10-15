@@ -1,12 +1,12 @@
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
-import mapboxgl, { Marker, Map } from 'mapbox-gl';
+import mapboxgl, { Map, Marker } from 'mapbox-gl';
 import { useEffect, useRef, useState } from 'react';
 import LocationForm from './LocationForm';
 
 import { env } from '@/env';
+import { DEFAULT_COORDINATES, DEFAULT_ZOOM } from '@/lib/constants';
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { DEFAULT_COORDINATES, DEFAULT_ZOOM } from '@/lib/constants';
 
 export interface Location {
     address: string;

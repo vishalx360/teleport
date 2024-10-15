@@ -5,12 +5,12 @@ import BackButton from "@/components/BackButton"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Skeleton } from "@/components/ui/skeleton"
 import useBookingStore from "@/context/BookingStore"
 import { vehicleIconMap, vehicles } from "@/lib/constants"
 import { AlertTriangle, Clock, DollarSign, Info, Package } from "lucide-react"
 import Link from "next/link"
 import MapView from "./MapView"
-import { Skeleton } from "@/components/ui/skeleton"
 
 // Safety Info Component
 const SafetyInfo = () => (

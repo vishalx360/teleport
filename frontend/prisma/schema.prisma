@@ -69,10 +69,10 @@ model User {
     accounts      Account[]
     sessions      Session[]
 
-    createdAt     DateTime  @default(now())
-    role          UserRoles @default(USER)
+    createdAt DateTime   @default(now())
+    role      UserRoles?
 
-    addresses     Address[]
+    addresses Address[]
 }
 
 model VerificationToken {

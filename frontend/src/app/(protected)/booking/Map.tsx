@@ -4,9 +4,9 @@ import mapboxgl from 'mapbox-gl';
 import { useEffect, useRef } from 'react';
 
 import { env } from "@/env";
+import { DEFAULT_COORDINATES } from '@/lib/constants';
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { DEFAULT_COORDINATES } from '@/lib/constants';
 
 
 const Map = ({ points }: {

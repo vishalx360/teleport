@@ -1,8 +1,8 @@
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import { getDistanceAndDuration } from '@/app/booking/getDistanceAndDuration';
+import { getDistanceAndDuration } from '@/app/(protected)/booking/getDistanceAndDuration';
 import { Vehicle, vehicles } from '@/lib/constants';
 import { Address } from '@prisma/client';
+import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
 
 interface BookingStoreState {
     pickupAddress: Address | null;

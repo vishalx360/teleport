@@ -1,4 +1,4 @@
-import { BikeIcon, Truck } from "lucide-react";
+import { BikeIcon, Truck, UserCog, UserIcon } from "lucide-react";
 
 
 export const DEFAULT_COORDINATES = [77.594566, 12.971599,]
@@ -21,6 +21,14 @@ export const vehicleIconMap: {
     "Bike": <BikeIcon className="h-8 w-8" />,
     "Mini-Truck": <Truck className="h-8 w-8" />
 }
+
+export const userRoleIconMap: {
+    [key: string]: JSX.Element
+} = {
+    "USER": <UserIcon className="h-8 w-8" />,
+    "DRIVER": <UserCog className="h-8 w-8" />
+}
+
 
 export const vehicles: Vehicle[] = [
     {
