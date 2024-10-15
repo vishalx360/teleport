@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { vehicles } from '@/lib/constants'
+import useBookingStore from '@/context/BookingStore'
+import { vehicleIconMap, vehicles } from '@/lib/constants'
 import { ArrowRight, Clock } from "lucide-react"
+import { useRouter } from 'next/navigation'
 
 // Default values for props
 const defaultCheckoutData = {
@@ -40,19 +42,26 @@ const defaultCheckoutData = {
 type CheckoutProps = typeof defaultCheckoutData
 
 export default function CheckoutPage({
-    totalAmount = defaultCheckoutData.totalAmount,
-    addresses = defaultCheckoutData.addresses,
-    distance = defaultCheckoutData.distance,
     estimatedDeliveryTime = defaultCheckoutData.estimatedDeliveryTime,
     pickupTime = defaultCheckoutData.pickupTime,
-    discountPercentage = defaultCheckoutData.discountPercentage,
-    vehicle = defaultCheckoutData.vehicle
 }: CheckoutProps = defaultCheckoutData) {
 
-    const price = vehicle.perKmCost * distance
-    const discount = price * (discountPercentage / 100)
-    const finalPrice = price - discount
+    const { distance, pickupAddress, deliveryAddress, selectedVehicle, discountPercentage } = useBookingStore();
 
+    const router = useRouter()
+
+    if (pickupAddress === null || deliveryAddress === null || selectedVehicle === null) {
+        return router.push('/booking');
+    };
+    const price = selectedVehicle.perKmCost * distance;
+    const discount = price * (discountPercentage / 100);
+    const finalPrice = price - discount;
+
+    const formattedPrice = price.toFixed(2);
+    const formattedDiscount = discount.toFixed(2);
+    const formattedFinalPrice = finalPrice.toFixed(2);
+
+    const VehicleIcon = vehicleIconMap[selectedVehicle.name];
     return (
         <div className="min-h-screen bg-gray-100 p-4">
             <Card className="max-w-md mx-auto">
@@ -64,8 +73,8 @@ export default function CheckoutPage({
                     <div className="bg-green-50 p-4 rounded-lg">
                         <h2 className="text-xl font-semibold">To Pay</h2>
                         <div className="flex items-center justify-between mt-2">
-                            <span className="text-3xl font-bold">₹{finalPrice}</span>
-                            <span className="text-green-600 font-medium">You save ₹{discount}</span>
+                            <span className="text-3xl font-bold">₹{formattedFinalPrice}</span>
+                            <span className="text-green-600 font-medium">You save ₹{formattedDiscount}</span>
                         </div>
                     </div>
 
@@ -73,12 +82,12 @@ export default function CheckoutPage({
                         <h3 className="font-semibold">Delivery Details</h3>
                         <div className="flex gap-3 items-center ">
                             <span>
-                                {addresses.pickup.location}
+                                {pickupAddress?.nickname}
                             </span>
                             <ArrowRight className='w-5 h-5' />
                             <span>
 
-                                {addresses.delivery.location}
+                                {deliveryAddress?.nickname}
                             </span>
                         </div>
                         <p className="text-sm">{distance} km • Est. delivery in {estimatedDeliveryTime}</p>
@@ -87,17 +96,17 @@ export default function CheckoutPage({
                     <Card className="p-2 px-4">
                         <div className="flex items-center justify-between gap-5">
                             <div className="flex items-center gap-5">
-                                {vehicle.icon}
+                                {VehicleIcon}
                                 <div className=" items-center text-green-600">
-                                    <span className="text-sm font-bold mr-2 text-gray-600">{vehicle.name}</span>
+                                    <span className="text-sm font-bold mr-2 text-gray-600">{selectedVehicle?.name}</span>
                                     <div className="flex items-center text-green-600">
                                         <Clock className="h-4 w-4 mr-2" />
-                                        <span className="text-sm font-medium">Pick up in {pickupTime}</span>
+                                        <span className="text-sm font-medium">Est. Pick up in {pickupTime}</span>
                                     </div>
                                 </div>
                             </div>
                             <div className='justify-self-end'>
-                                <p className="text-lg font-bold text-green-700">₹{vehicle.perKmCost * distance}</p>
+                                <p className="text-lg font-bold text-green-700">₹{formattedPrice}</p>
                             </div>
                         </div>
                     </Card>
@@ -108,16 +117,16 @@ export default function CheckoutPage({
                         <div className="space-y-1 text-sm">
                             <div className="flex justify-between">
                                 <span>Delivery Fee for {distance} kms</span>
-                                <span>₹{price}</span>
+                                <span>₹{formattedPrice}</span>
                             </div>
                             <div className="flex justify-between text-green-600">
                                 <span>{discountPercentage}% Discount</span>
-                                <span>-₹{discount}</span>
+                                <span>-₹{formattedDiscount}</span>
                             </div>
                             <div className="flex justify-between font-semibold pt-2">
                                 <span>To Pay</span>
                                 <span>₹{
-                                    finalPrice
+                                    formattedFinalPrice
                                 }</span>
                             </div>
                         </div>
@@ -125,21 +134,13 @@ export default function CheckoutPage({
 
                     <div className="space-y-2">
                         <p className="text-sm text-gray-600">
-                            Cancellation fee of ₹30 may apply if you cancel after delivery partner reaches pickup location. <a href="#" className="text-blue-600">Read Policy</a>
+                            By clicking on Make Payment you confirm that your order does not contain any illegal or contraband items. <a href="#" className="text-blue-600">View T&C</a>
                         </p>
-                        <div className="flex items-start space-x-2">
-                            <Checkbox id="terms" />
-                            <div className="grid gap-1.5 leading-none">
-                                <Label htmlFor="terms" className="text-sm text-gray-600">
-                                    I confirm that my order does not contain any illegal or contraband items. <a href="#" className="text-blue-600">View T&C</a>
-                                </Label>
-                            </div>
-                        </div>
                     </div>
                 </CardContent>
                 <CardFooter>
                     <Button className="w-full bg-blue-500 hover:bg-blue-600 text-white py-6 text-lg">
-                        Make Payment | ₹{totalAmount}
+                        Make Payment | ₹{formattedFinalPrice}
                     </Button>
                 </CardFooter>
             </Card>

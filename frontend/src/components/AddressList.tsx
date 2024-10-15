@@ -5,12 +5,13 @@ import { Address } from "@prisma/client";
 import { LucideTrash } from "lucide-react";
 import { useState } from 'react';
 import { Button } from "./ui/button";
+import { Skeleton } from "./ui/skeleton";
+import useBookingStore from "@/context/BookingStore";
 
-function AddressList({ updateAddress, setOpen }: { updateAddress: (updatedAddress: Address) => void; setOpen: (open: boolean) => void; }) {
+function AddressList({ updateAddress, defaultAddress, disabledAddressId, setOpen }: { defaultAddress: Address | null; disabledAddressId?: string, updateAddress: (updatedAddress: Address) => void; setOpen: (open: boolean) => void; }) {
     const { data, isLoading, error } = api.user.getAddresses.useQuery();
-    const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
+    const [selectedAddress, setSelectedAddress] = useState<Address | null>(defaultAddress);
 
-    if (isLoading) return <p>Loading...</p>;
     if (error) return <p>Error loading addresses</p>;
 
     const handleConfirm = () => {
@@ -24,35 +25,48 @@ function AddressList({ updateAddress, setOpen }: { updateAddress: (updatedAddres
 
     return (
         <div>
-            {data?.length === 0 ? (
-                <p>No addresses found. Add a new address to continue.</p>
+            {isLoading ? (
+                <div className="space-y-5">
+                    {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+                </div>
             ) : (
-                <RadioGroup className="space-y-5">
-                    {data?.map((address) => (
-                        <div key={address.id} className="flex items-start gap-5">
-                            <RadioGroupItem
-                                value={address.id}
-                                id={address.id}
-                                checked={selectedAddress?.id === address.id}
-                                onChange={() => setSelectedAddress(address)}
-                                className="form-radio hidden"
-                            />
-                            <Label
-                                className={`w-full space-y-2 p-4 border rounded-lg cursor-pointer ${selectedAddress?.id === address.id ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
-                                htmlFor={address.id}
-                                onClick={() => setSelectedAddress(address)}
-                            >
-                                <h2 className='font-bold'>{address.nickname || "Unnamed Address"}</h2>
-                                <p className='line-clamp-1 text-gray-600'>{address.address}</p>
-                                <p className='text-gray-600'>{`${address.contactName}, ${address.mobile}`}</p>
-                            </Label>
-                            <div className="space-y-2">
-                                {/*TODO: <EditAddress addressId={address.id} /> */}
-                                <DeleteAddress addressId={address.id} />
-                            </div>
+                <>
+                    {data?.length ? (
+                        <RadioGroup className="space-y-5">
+                            {data.map((address) => (
+                                <div key={address.id} className="flex items-start gap-5">
+                                    <RadioGroupItem
+                                        value={address.id}
+                                        id={address.id}
+                                        disabled={disabledAddressId === address.id}
+                                        checked={selectedAddress?.id === address.id}
+                                        onChange={() => {
+                                            if (disabledAddressId !== address.id) setSelectedAddress(address);
+                                        }}
+                                        className="form-radio hidden"
+                                    />
+                                    <Label
+                                        htmlFor={address.id}
+                                        className={`w-full space-y-2 p-4 border rounded-lg cursor-pointer ${disabledAddressId === address.id ? 'opacity-50 cursor-not-allowed' : ''} ${selectedAddress?.id === address.id ? 'border-blue-500 bg-blue-50' : 'border-gray-300'}`}
+                                        onClick={() => {
+                                            if (disabledAddressId !== address.id) setSelectedAddress(address);
+                                        }}
+                                    >
+                                        <h2 className='font-bold'>{address.nickname || "Unnamed Address"}</h2>
+                                        <p className='line-clamp-1 text-gray-600'>{address.address}</p>
+                                        <p className='text-gray-600'>{`${address.contactName}, ${address.mobile}`}</p>
+                                    </Label>
+                                    <DeleteAddress addressId={address.id} />
+                                </div>
+
+                            ))}
+                        </RadioGroup>
+                    ) : (
+                        <div className="text-center text-gray-600 py-5">
+                            No addresses found. Add a new address to continue.
                         </div>
-                    ))}
-                </RadioGroup>
+                    )}
+                </>
             )}
             <Button
                 disabled={!selectedAddress}
@@ -66,12 +80,20 @@ function AddressList({ updateAddress, setOpen }: { updateAddress: (updatedAddres
 }
 
 function DeleteAddress({ addressId }: { addressId: string }) {
-    const { mutateAsync } = api.user.deleteAddress.useMutation();
+    const { mutateAsync, isPending } = api.user.deleteAddress.useMutation();
+    const utils = api.useUtils();
+    const { pickupAddress, deliveryAddress, setPickUpAddress, setDeliveryAddress } = useBookingStore();
+
     const handleDelete = async () => {
         try {
             await mutateAsync(addressId);
-            console.log('Address deleted:', addressId);
-            // Optionally, trigger a refetch or state update here
+            utils.user.getAddresses.refetch();
+            if (pickupAddress?.id === addressId) {
+                setPickUpAddress(null);
+            }
+            if (deliveryAddress?.id === addressId) {
+                setDeliveryAddress(null);
+            }
         } catch (error) {
             console.error('Error deleting address:', error);
         }
@@ -79,7 +101,9 @@ function DeleteAddress({ addressId }: { addressId: string }) {
 
     return (
         <div className="ml-auto">
-            <Button type="button" onClick={handleDelete} variant="outline" className="text-red-500">
+            <Button
+                loading={isPending}
+                type="button" onClick={handleDelete} variant="outline" className="text-red-500">
                 <LucideTrash className="h-4 w-4 mr-1 text-red-500" />
             </Button>
         </div>

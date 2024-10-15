@@ -1,25 +1,26 @@
 import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
-import mapboxgl from 'mapbox-gl';
+import mapboxgl, { Marker } from 'mapbox-gl';
 import { useEffect, useRef, useState } from 'react';
 import LocationForm from './LocationForm';
 
 import { env } from '@/env';
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { DEFAULT_COORDINATES, DEFAULT_ZOOM } from '@/lib/constants';
 
-const DEFAULT_LATITUDE = 37.7749;
-const DEFAULT_LONGITUDE = -122.4194;
-const DEFAULT_ZOOM = 12;
 
-const MapPicker = ({ onSubmit, isPending }) => {
+const MapPicker = ({ onSubmit, isPending }: {
+    onSubmit: () => void;
+    isPending: boolean;
+}) => {
     const mapContainerRef = useRef();
     const mapRef = useRef();
     const [selectedLocation, setSelectedLocation] = useState({
         address: '',
-        latitude: DEFAULT_LATITUDE,
-        longitude: DEFAULT_LONGITUDE,
+        latitude: null,
+        longitude: null,
     });
-    const markerRef = useRef(null);
+    const markerRef = useRef<Marker | null>(null);
 
     useEffect(() => {
         mapboxgl.accessToken = env.NEXT_PUBLIC_MAPBOX_TOKEN
@@ -28,7 +29,7 @@ const MapPicker = ({ onSubmit, isPending }) => {
         mapRef.current = new mapboxgl.Map({
             container: mapContainerRef.current,
             style: 'mapbox://styles/mapbox/streets-v12',
-            center: [DEFAULT_LONGITUDE, DEFAULT_LATITUDE],
+            center: DEFAULT_COORDINATES,
             zoom: DEFAULT_ZOOM,
         });
 

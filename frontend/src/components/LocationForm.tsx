@@ -6,26 +6,43 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
-import { locationSchema } from './validationSchema'; // Adjust the import path as necessary
+import { locationSchema } from './validationSchema';
 
-const LocationForm = ({ handleCurrentLocation, mapLocation, onSubmit, isPending }) => {
-    const { control, handleSubmit, setValue, formState: { errors } } = useForm({
+const LocationForm = ({
+    handleCurrentLocation,
+    mapLocation,
+    onSubmit,
+    isPending
+}:
+    {
+        handleCurrentLocation: () => void;
+        mapLocation: {
+            address: string;
+            latitude: null;
+            longitude: null;
+        };
+        onSubmit: () => void;
+        isPending: boolean;
+    }
+) => {
+    const { control, handleSubmit, setValue, formState: { errors }, clearErrors } = useForm({
         resolver: zodResolver(locationSchema),
         defaultValues: {
-            address: mapLocation.address,
             nickname: '',
             contactName: '',
             mobile: '',
-            latitude: 0,
-            longitude: 0,
+            address: mapLocation.address,
+            latitude: mapLocation.latitude,
+            longitude: mapLocation.longitude,
         }
     });
 
     // Update the address field when mapAddress changes
     useEffect(() => {
         setValue('address', mapLocation.address);
-        setValue('latitude', mapLocation.latitude);
-        setValue('longitude', mapLocation.longitude);
+        setValue('latitude', (mapLocation.latitude));
+        setValue('longitude', (mapLocation.longitude));
+        clearErrors()
     }, [mapLocation]);
 
     return (
@@ -39,7 +56,7 @@ const LocationForm = ({ handleCurrentLocation, mapLocation, onSubmit, isPending 
                     >
                         <LocateFixed className='mr-2 w-5 h-5' />  Current location
                     </Button>
-                    <div className="my-2">
+                    <div className="mb-2">
                         <Label className="block text-sm font-medium">Address:</Label>
                         <Controller
                             name="address"
@@ -52,10 +69,9 @@ const LocationForm = ({ handleCurrentLocation, mapLocation, onSubmit, isPending 
 
                             )}
                         />
-                        {errors.address && <span className="text-red-500 text-sm">{errors.address.message}</span>}
+                        {errors.address && <span className="text-red-500 text-sm">{String(errors.address.message)}</span>}
                     </div>
                 </div>
-
                 <div className="mb-2">
                     <Label className="block text-sm font-medium">Nickname:</Label>
                     <Controller
@@ -105,8 +121,13 @@ const LocationForm = ({ handleCurrentLocation, mapLocation, onSubmit, isPending 
                         {errors.mobile && <span className="text-red-500 text-sm">{errors.mobile.message}</span>}
                     </div>
                 </div>
+                {
+                    errors.latitude || errors.longitude ? (
+                        <div className="text-red-500 text-xs">Please click on the map to select a location.</div>
+                    ) : null
+                }
                 <Button
-                    isLoading={isPending}
+                    loading={isPending}
                     type="submit"
                     disabled={Object.keys(errors).length > 0}
                     className="mt-4 w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 hover:text-white text-white rounded">

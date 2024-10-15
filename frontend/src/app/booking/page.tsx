@@ -10,6 +10,7 @@ import { vehicles } from "@/lib/constants"
 import { AlertTriangle, Clock, DollarSign, Info, Package } from "lucide-react"
 import Link from "next/link"
 import MapView from "./MapView"
+import { Skeleton } from "@/components/ui/skeleton"
 
 // Safety Info Component
 const SafetyInfo = () => (
@@ -40,7 +41,8 @@ const SafetyInfo = () => (
 
 // Vehicle Selection Component
 const VehicleSelection = () => {
-    const { distance, setSelectedVehicle, selectedVehicle } = useBookingStore();
+    const { distance, setSelectedVehicle, calculating, selectedVehicle } = useBookingStore();
+
     return (
         <div className="space-y-4">
             <h3 className="font-semibold">Available Vehicles</h3>
@@ -68,7 +70,14 @@ const VehicleSelection = () => {
                             </div>
                         </div>
                         <div className="text-right">
-                            <p className="font-semibold">₹{vehicle.perKmCost * distance}</p>
+                            {
+                                calculating ?
+
+                                    <Skeleton className="h-4 w-[250px]" />
+
+                                    :
+                                    <p className="font-semibold">₹{(vehicle.perKmCost * distance).toFixed(2)}</p>
+                            }
                             <Popover>
                                 <PopoverTrigger asChild>
                                     <Button variant="ghost" size="sm">
@@ -128,8 +137,8 @@ export default function BookingPage() {
                 <CardContent className="space-y-4">
                     {/* Address Input */}
                     <div className="space-y-4">
-                        <AddressPicker focused={pickupAddress === null} address={pickupAddress} addressType="pickup" updateAddress={setPickUpAddress} />
-                        <AddressPicker focused={pickupAddress !== null && deliveryAddress === null} address={deliveryAddress} addressType="delivery" updateAddress={setDeliveryAddress} />
+                        <AddressPicker focused={pickupAddress === null} address={pickupAddress} addressType="pickup" disabledAddressId={deliveryAddress?.id} updateAddress={setPickUpAddress} />
+                        <AddressPicker focused={pickupAddress !== null && deliveryAddress === null} address={deliveryAddress} addressType="delivery" disabledAddressId={pickupAddress?.id} updateAddress={setDeliveryAddress} />
                     </div>
                     {/* Safety Info */}
                     {!pickupAddress || !deliveryAddress ?

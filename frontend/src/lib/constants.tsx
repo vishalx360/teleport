@@ -1,8 +1,12 @@
 import { BikeIcon, Truck } from "lucide-react";
 
+
+export const DEFAULT_COORDINATES = [77.594566, 12.971599,]
+export const DEFAULT_ZOOM = 12;
+
+
 export type Vehicle = {
     name: string;
-    icon: React.ReactNode;
     price: number;
     perKmCost: number;
     capacity: string;
@@ -10,10 +14,17 @@ export type Vehicle = {
     weightLimit: string;
 }
 
+
+export const vehicleIconMap: {
+    [key: string]: JSX.Element
+} = {
+    "Bike": <BikeIcon className="h-8 w-8" />,
+    "Mini-Truck": <Truck className="h-8 w-8" />
+}
+
 export const vehicles: Vehicle[] = [
     {
         name: "Bike",
-        icon: <BikeIcon className="h-8 w-8" />,
         price: 200,
         perKmCost: 20,
         capacity: "1 cubic meter",
@@ -22,7 +33,6 @@ export const vehicles: Vehicle[] = [
     },
     {
         name: "Mini-Truck",
-        icon: <Truck className="h-8 w-8" />,
         price: 800,
         perKmCost: 50,
         capacity: "7-8 cubic meters",

@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { api } from "@/trpc/react";
 import { LucidePlusCircle } from "lucide-react";
 import { useState } from "react";
@@ -11,7 +11,7 @@ export const AddAddress = () => {
     const { mutateAsync, isPending } = api.user.saveAddress.useMutation();
     const [open, setOpen] = useState(false);
 
-    async function onSubmit(data) {
+    async function onSubmit(data: any) {
         try {
             // Call the tRPC mutation to save the address
             await mutateAsync(data).then(async (res) => {
@@ -40,6 +40,9 @@ export const AddAddress = () => {
             <DialogContent aria-describedby="" className="md:max-w-4xl">
                 <DialogHeader>
                     <DialogTitle>Add Address</DialogTitle>
+                    <DialogDescription>
+                        Add a new address for delivery or pickup.
+                    </DialogDescription>
                 </DialogHeader>
                 <div className="w-full h-full">
                     <MapPicker isPending={isPending} onSubmit={onSubmit} />

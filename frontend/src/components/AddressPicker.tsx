@@ -9,9 +9,10 @@ import AddressList from "./AddressList";
 
 export type AddressType = "pickup" | "delivery";
 
-export const AddressPicker = ({ addressType, address, updateAddress, focused }: {
+export const AddressPicker = ({ addressType, disabledAddressId, address, updateAddress, focused }: {
     addressType: AddressType;
     address: Address | null;
+    disabledAddressId?: string;
     updateAddress: (updatedAddress: Address) => void;
     focused?: boolean;
 }) => {
@@ -82,7 +83,11 @@ export const AddressPicker = ({ addressType, address, updateAddress, focused }: 
                         Please select address from the following list or add a new address
                     </DialogDescription>
                     <AddAddress />
-                    <AddressList setOpen={setOpen} updateAddress={updateAddress} />
+                    <AddressList
+                        setOpen={setOpen}
+                        defaultAddress={address}
+                        disabledAddressId={disabledAddressId}
+                        updateAddress={updateAddress} />
                 </DialogContent>
             </Dialog>
         </div>

@@ -6,8 +6,8 @@ import { useEffect, useRef } from 'react';
 import { env } from "@/env";
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { DEFAULT_COORDINATES } from '@/lib/constants';
 
-const BANGALORE_COORDINATES = [77.594566, 12.971599,]
 
 const Map = ({ points }: {
     points: { latitude: number, longitude: number, markerText: string }[]
@@ -25,7 +25,7 @@ const Map = ({ points }: {
             mapRef.current = new mapboxgl.Map({
                 container: mapContainerRef.current,
                 style: 'mapbox://styles/mapbox/streets-v12',
-                center: BANGALORE_COORDINATES,
+                center: DEFAULT_COORDINATES,
                 zoom: 14,
             });
 
