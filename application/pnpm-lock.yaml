@@ -17,9 +17,6 @@ importers:
       '@mapbox/mapbox-gl-geocoder':
         specifier: ^5.0.3
         version: 5.0.3
-      '@prisma/client':
-        specifier: ^5.14.0
-        version: 5.20.0(prisma@5.20.0)
       '@radix-ui/react-checkbox':
         specifier: ^1.1.2
         version: 1.1.2(@types/react-dom@18.3.1)(@types/react@18.3.11)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -183,9 +180,6 @@ importers:
       prettier-plugin-tailwindcss:
         specifier: ^0.6.5
         version: 0.6.8(prettier@3.3.3)
-      prisma:
-        specifier: ^5.14.0
-        version: 5.20.0
       tailwindcss:
         specifier: ^3.4.3
         version: 3.4.13
@@ -3309,9 +3303,11 @@ snapshots:
     optionalDependencies:
       prisma: 5.20.0
 
-  '@prisma/debug@5.20.0': {}
+  '@prisma/debug@5.20.0':
+    optional: true
 
-  '@prisma/engines-version@5.20.0-12.06fc58a368dc7be9fbbbe894adf8d445d208c284': {}
+  '@prisma/engines-version@5.20.0-12.06fc58a368dc7be9fbbbe894adf8d445d208c284':
+    optional: true
 
   '@prisma/engines@5.20.0':
     dependencies:
@@ -3319,16 +3315,19 @@ snapshots:
       '@prisma/engines-version': 5.20.0-12.06fc58a368dc7be9fbbbe894adf8d445d208c284
       '@prisma/fetch-engine': 5.20.0
       '@prisma/get-platform': 5.20.0
+    optional: true
 
   '@prisma/fetch-engine@5.20.0':
     dependencies:
       '@prisma/debug': 5.20.0
       '@prisma/engines-version': 5.20.0-12.06fc58a368dc7be9fbbbe894adf8d445d208c284
       '@prisma/get-platform': 5.20.0
+    optional: true
 
   '@prisma/get-platform@5.20.0':
     dependencies:
       '@prisma/debug': 5.20.0
+    optional: true
 
   '@radix-ui/primitive@1.1.0': {}
 
@@ -5506,6 +5505,7 @@ snapshots:
       '@prisma/engines': 5.20.0
     optionalDependencies:
       fsevents: 2.3.3
+    optional: true
 
   prop-types@15.8.1:
     dependencies:

@@ -11,10 +11,11 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
 
-import { pusherServer } from "@/lib/pusherServer";
-import { redisClient } from "@/lib/redisClient";
+import { pusherServer } from "@utils/pusherServer";
+import { redisClient } from "@utils/redisClient";
 import { getServerAuthSession } from "@/server/auth";
-import { db } from "@/server/db";
+import { db } from "@utils/db"
+import { kafkaProducer } from "@/lib/kafkaProducer";
 
 export type UserNotification = {
   message: string;
@@ -50,6 +51,7 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
     db,
     redis: redisClient,
     pusher: pusherServer,
+    kafkaProducer,
     notify,
     session,
     ...opts,

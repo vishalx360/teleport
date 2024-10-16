@@ -1,45 +1,6 @@
-import { Kafka } from 'kafkajs';
-import Redis from 'ioredis';
-import { PrismaClient } from '@prisma/client';
-import Pusher from 'pusher';
-
-// Set up Kafka, Redis, Prisma, and Pusher clients
-const kafka = new Kafka({
-    clientId: 'matchmaking-service',
-    brokers: ['localhost:9092'], // Adjust to your Kafka setup
-});
-
-const redis = new Redis({
-    host: 'localhost',
-    port: 6379,
-});
-
-const prisma = new PrismaClient();
-
-const pusher = new Pusher({
-    appId: 'YOUR_APP_ID',
-    key: 'YOUR_APP_KEY',
-    secret: 'YOUR_APP_SECRET',
-    cluster: 'YOUR_CLUSTER',
-    useTLS: true,
-});
-
-// Kafka consumer setup for the BOOKINGS topic
-const consumer = kafka.consumer({ groupId: 'matchmaking-group' });
-
-async function startConsumer() {
-    await consumer.connect();
-    await consumer.subscribe({ topic: 'BOOKINGS', fromBeginning: true });
-
-    await consumer.run({
-        eachMessage: async ({ topic, partition, message }) => {
-            if (message.value) {
-                const bookingData = JSON.parse(message.value.toString());
-                await processBooking(bookingData);
-            }
-        },
-    });
-}
+import { db as prisma } from "@utils/db";
+import { redisClient as redis } from "@utils/redisClient";
+import { pusherServer as pusher } from "@utils/pusherServer";
 
 // Process booking and start matchmaking
 async function processBooking(bookingData: any) {
@@ -148,5 +109,4 @@ async function notifyUserNoDriverAvailable(bookingData: any) {
     });
 }
 
-// Start the Kafka consumer
-startConsumer().catch(console.error);
+export { processBooking };

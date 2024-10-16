@@ -28,7 +28,7 @@ export const userRouter = createTRPCRouter({
     .input(z.string())
     .mutation(async ({ ctx, input }) => {
       console.log(input);
-      const response = await ctx.pusher.authenticateUser(input, {
+      const response = ctx.pusher.authenticateUser(input, {
         id: ctx.session.user.id,
         user_info: ctx.session.user,
       });
@@ -73,8 +73,7 @@ export const userRouter = createTRPCRouter({
           duration: input.duration, // TODO: calculate in backend
         },
       });
-      // TODO put this as task in Kafka 
-
+      await ctx.kafkaProducer("BOOKINGS", booking);
       return booking;
     }),
 

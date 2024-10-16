@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "baseUrl": "./",
+    "target": "es6",
+    "module": "Preserve",
+    "strict": true,
+    "esModuleInterop": true,
+    "moduleResolution": "Bundler",
+  },
+  "include": [
+    "**/*.ts"
+  ]
+}
