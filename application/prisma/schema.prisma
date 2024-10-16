@@ -11,6 +11,7 @@ datasource db {
 }
 
 enum BookinStatus {
+    BOOKED
     ACCEPTED
     PICKED_UP
     IN_TRANSIT
