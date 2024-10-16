@@ -47,7 +47,7 @@ const VehicleSelection = () => {
         <div className="space-y-4">
             <h3 className="font-semibold">Available Vehicles</h3>
             {vehicles.map((vehicle) => {
-                const VehicleIcon = vehicleIconMap[vehicle?.name];
+                const VehicleIcon = vehicleIconMap[vehicle?.id];
 
                 return (
                     <label key={vehicle.name} className="block cursor-pointer">
@@ -131,7 +131,7 @@ const EstimatedFare = () => {
 };
 
 export default function BookingPage() {
-    const { pickupAddress, deliveryAddress, setPickUpAddress, setDeliveryAddress } = useBookingStore();
+    const { pickupAddress, deliveryAddress, selectedVehicle, setPickUpAddress, setDeliveryAddress } = useBookingStore();
 
     return (
         <div className="min-h-screen bg-gray-100 p-4">
@@ -161,7 +161,7 @@ export default function BookingPage() {
                 </CardContent>
                 <CardFooter>
                     <Link className="w-full" href="/checkout" passHref>
-                        <Button className="w-full" disabled={!pickupAddress || !deliveryAddress}>
+                        <Button disabled={!pickupAddress || !selectedVehicle || !deliveryAddress} className="w-full bg-blue-500 hover:bg-blue-600 text-white py-6 text-lg">
                             Book Now
                         </Button>
                     </Link>

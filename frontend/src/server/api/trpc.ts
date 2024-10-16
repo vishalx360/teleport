@@ -11,9 +11,26 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
 
+import { pusherServer } from "@/lib/pusherServer";
+import { redisClient } from "@/lib/redisClient";
 import { getServerAuthSession } from "@/server/auth";
 import { db } from "@/server/db";
 
+export type UserNotification = {
+  message: string;
+  type: "success" | "error";
+};
+
+// notify message to the client
+async function notify({
+  channel,
+  notification
+}: {
+  channel: string;
+  notification: UserNotification
+}) {
+  return await pusherServer.trigger(channel, "notification", notification);
+}
 /**
  * 1. CONTEXT
  *
@@ -31,10 +48,15 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 
   return {
     db,
+    redis: redisClient,
+    pusher: pusherServer,
+    notify,
     session,
     ...opts,
   };
 };
+
+
 
 /**
  * 2. INITIALIZATION

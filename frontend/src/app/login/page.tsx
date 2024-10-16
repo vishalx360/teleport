@@ -8,15 +8,33 @@ import Link from "next/link"
 import { useState } from "react"
 
 export default function LoginPage() {
-    const [isLoading, setIsLoading] = useState<boolean>(false)
+    const [loadingState, setLoadingState] = useState({
+        github: false,
+        google: false,
+    })
 
     function handleGithubLogin() {
-        console.log("Github login clicked");
         setIsLoading(true);
         signIn("github", { callbackUrl: "/" });
         // after 5 seconds, set isLoading to false
         setTimeout(() => {
             setIsLoading(false);
+        }, 5000);
+    }
+
+    function handleGoogleLogin() {
+        setIsLoading(true);
+        signIn("google", { callbackUrl: "/" });
+        // after 5 seconds, set isLoading to false
+        setTimeout(() => {
+            setIsLoading(false);
+        }, 5000);
+    }
+    function handleProviderLogin(provider: string) {
+        setLoadingState((prev) => ({ ...prev, [provider]: true }));
+        signIn(provider, { callbackUrl: "/" });
+        setTimeout(() => {
+            setLoadingState((prev) => ({ ...prev, [provider]: false }));
         }, 5000);
     }
 
@@ -32,18 +50,22 @@ export default function LoginPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="">
-                    <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
-                        <Button variant="default"
-                            onClick={handleGithubLogin}
-                            className="rounded-xl flex items-center justify-center gap-3 font-bold  p-4 px-5 h-auto w-full bg-blue-500 text-white hover:bg-blue-600 transition-colors hover:text-white"
-                            type="button" disabled={isLoading}>
-                            {isLoading ? (
-                                <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                                <Icons.gitHub className="mr-2 h-4 w-4" />
-                            )}{" "}
+                    <div className="mx-auto flex w-full flex-col justify-center space-y-5 sm:w-[350px]">
+                        <Button variant="outline"
+                            onClick={() => { handleProviderLogin("google") }}
+                            type="button" loading={loadingState.google}>
+                            <Icons.google className="mr-2 h-4 w-4" />
+                            Continue with Google
+                        </Button>
+                        <Button variant="outline"
+                            onClick={() => { handleProviderLogin("github") }}
+                            type="button" loading={loadingState.github}>
+                            <Icons.gitHub className="mr-2 h-4 w-4" />
                             Continue with Github
-                        </Button>                        <p className="px-8 text-center text-sm text-muted-foreground">
+                        </Button>
+
+
+                        <p className="px-8 text-center text-sm text-muted-foreground">
                             By clicking continue, you agree to our{" "}
                             <Link
                                 href="/terms"

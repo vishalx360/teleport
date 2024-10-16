@@ -1,5 +1,4 @@
 
-import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
 import mapboxgl from 'mapbox-gl';
 import { useEffect, useRef } from 'react';
 
@@ -28,13 +27,6 @@ const Map = ({ points }: {
                 center: DEFAULT_COORDINATES,
                 zoom: 14,
             });
-
-            // Add map controls
-            const geocoder = new MapboxGeocoder({
-                accessToken: mapboxgl.accessToken,
-                mapboxgl: mapboxgl,
-            });
-
         }
 
         return () => {

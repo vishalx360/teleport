@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const locationSchema = z.object({
+export const addressSchema = z.object({
     address: z.string().min(5, "Address is required and must be at least 5 characters"),
     nickname: z.string(),
     contactName: z.string().min(1, "Contact name is required"),
@@ -10,10 +10,24 @@ export const locationSchema = z.object({
 });
 
 // with id
-export const locationModalSchema = locationSchema.extend({
+export const locationModalSchema = addressSchema.extend({
     id: z.string(),
 });
 
 export const userRoleSchema = z.object({
     role: z.enum(["USER", "DRIVER"]),
+});
+
+export const locationSchema = z.object({
+    latitude: z.number().min(-90, "Latitude must be at least -90").max(90, "Latitude must be at most 90"),
+    longitude: z.number().min(-180, "Longitude must be at least -180").max(180, "Longitude must be at most 180"),
+});
+
+export const bookingSchema = z.object({
+    vehicleId: z.string(),
+    pickupAddressId: z.string(),
+    deliveryAddressId: z.string(),
+    distance: z.number(),
+    duration: z.number(),
+    price: z.number(),
 });

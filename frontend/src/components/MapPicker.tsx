@@ -8,7 +8,7 @@ import { DEFAULT_COORDINATES, DEFAULT_ZOOM } from '@/lib/constants';
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
-export interface Location {
+export interface LocationType {
     address: string;
     latitude: number | null;
     longitude: number | null;
@@ -20,7 +20,7 @@ const MapPicker = ({ onSubmit, isPending }: {
 }) => {
     const mapContainerRef = useRef<HTMLDivElement | null>(null);
     const mapRef = useRef<Map | null>(null);
-    const [selectedLocation, setSelectedLocation] = useState<Location>({
+    const [selectedLocation, setSelectedLocation] = useState<LocationType>({
         address: '',
         latitude: null,
         longitude: null,

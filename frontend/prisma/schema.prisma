@@ -10,6 +10,40 @@ datasource db {
     url      = env("DATABASE_URL")
 }
 
+enum BookinStatus {
+    ACCEPTED
+    PICKED_UP
+    IN_TRANSIT
+    DELIVERED
+    CANCELLED
+    FAILED
+}
+
+model Booking {
+    id String @id @default(cuid())
+
+    user   User   @relation("userBooking", fields: [userId], references: [id])
+    userId String
+
+    driver   User?   @relation("driverBooking", fields: [driverId], references: [id])
+    driverId String?
+
+    status BookinStatus @default(BOOKED)
+
+    pickupAddress   Address @relation("pickupAddress", fields: [pickupAddressId], references: [id])
+    pickupAddressId String
+
+    deliveryAddress   Address @relation("deliveryAddress", fields: [deliveryAddressId], references: [id])
+    deliveryAddressId String
+
+    distance Float
+    duration Float
+    price    Float
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
 model Address {
     id          String @id @default(cuid())
     address     String
@@ -21,6 +55,9 @@ model Address {
 
     user   User   @relation(fields: [userId], references: [id])
     userId String
+
+    pickupBookings  Booking[] @relation("pickupAddress")
+    dropoffBookings Booking[] @relation("deliveryAddress")
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
@@ -69,10 +106,13 @@ model User {
     accounts      Account[]
     sessions      Session[]
 
-    createdAt DateTime   @default(now())
-    role      UserRoles?
+    role UserRoles?
 
-    addresses Address[]
+    addresses      Address[]
+    userBookings   Booking[] @relation("userBooking")
+    driverBookings Booking[] @relation("driverBooking")
+
+    createdAt DateTime @default(now())
 }
 
 model VerificationToken {

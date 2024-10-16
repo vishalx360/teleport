@@ -2,12 +2,13 @@
 import Link from "next/link";
 
 import LinkButton from "@/components/LinkButton";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowRight, InfoIcon, Package, UserCircle } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useState } from "react";
 
-export default function DashboardPage() {
+export default function DriverDashboardPage() {
 
   const { data: session, status } = useSession()
   return (
@@ -18,28 +19,30 @@ export default function DashboardPage() {
             <CardTitle className="text-2xl font-bold mt-2">
               <Package className="inline" /> Teleport
             </CardTitle>
-            <div className="flex gap-4 justify-center items-center">
+            <Button variant="ghost" className="flex items-center gap-4">
               <div className="text-right">
                 <p className="font-bold">
                   {status === "loading" ? "Loading..." : session?.user.name}
                 </p>
-                {session?.user.role && <p className="text-xs font-bold">
-                  {session?.user.role}
-                </p>}
-                <button variant={"ghost"} className="text-red-600" onClick={signOut}>
-                  Logout
-                </button>
+                <p className="capitalize bg-blue-500 text-white rounded-xl w-fit px-4">
+                  {String(session?.user.role).toLowerCase()}
+                </p>
               </div>
+              <Button className="text-red-600" onClick={signOut}>
+                Logout
+              </Button>
               <UserCircle />
-            </div>
+            </Button>
           </div>
           <CardDescription className="text-sm text-gray-600">
             Send anything, anywhere
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <NewBookingSection />
+
+          <AcceptBookingSection />
           <PastbookingsSection />
+
         </CardContent>
         <CardFooter>
 
@@ -49,17 +52,17 @@ export default function DashboardPage() {
   );
 }
 
-function NewBookingSection() {
+function AcceptBookingSection() {
   return (
     <div >
-      <LinkButton href="/booking" variant={"outline"}
+      <LinkButton href="/accept-bookings" variant={"outline"}
         className="rounded-xl p-4 px-5 flex items-center justify-between h-auto w-full bg-blue-500 text-white hover:bg-blue-600 transition-colors hover:text-white">
         <div>
           <h3 className="font-bold text-xl">
-            Pick up or Send anything
+            Accepting Bookings
           </h3>
           <p className="text-gray-100">
-            Enter pick up and delivery locations
+            Start accepting bookings and earn money
           </p>
         </div>
         <ArrowRight />

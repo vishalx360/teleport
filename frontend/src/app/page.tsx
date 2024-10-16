@@ -1,14 +1,15 @@
 import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/server/auth";
+import { redirect } from "next/navigation";
 import DashboardPage from "./(protected)/dashboard/page";
+import DriverDashboardPage from "./(protected)/driver-dashboard/page";
 import LoginPage from "./login/page";
-import OnBoardingPage from "./(protected)/onboarding/page";
 
 const rolePageMap = {
     "ADMIN": <DashboardPage />,
     "USER": <DashboardPage />,
-    "DRIVER": <DashboardPage />,
+    "DRIVER": <DriverDashboardPage />,
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -17,7 +18,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         return <LoginPage />;
     }
     if (session.user.role === null) {
-        return <OnBoardingPage />
+        return redirect("/onboarding");
     }
     const page = rolePageMap[session.user.role];
     return page

@@ -2,12 +2,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { LocateFixed } from 'lucide-react';
 import { useEffect } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Location } from './MapPicker';
+import { LocationType } from './MapPicker';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
-import { locationSchema } from './validationSchema';
+import { addressSchema } from './validationSchema';
 
 const LocationForm = ({
     handleCurrentLocation,
@@ -17,13 +17,13 @@ const LocationForm = ({
 }:
     {
         handleCurrentLocation: () => void;
-        mapLocation: Location;
+        mapLocation: LocationType;
         onSubmit: () => void;
         isPending: boolean;
     }
 ) => {
     const { control, handleSubmit, setValue, formState: { errors }, clearErrors } = useForm({
-        resolver: zodResolver(locationSchema),
+        resolver: zodResolver(addressSchema),
         defaultValues: {
             nickname: '',
             contactName: '',

@@ -7,6 +7,7 @@ export const DEFAULT_ZOOM = 12;
 
 export type Vehicle = {
     name: string;
+    id: string;
     price: number;
     perKmCost: number;
     capacity: string;
@@ -18,8 +19,8 @@ export type Vehicle = {
 export const vehicleIconMap: {
     [key: string]: JSX.Element
 } = {
-    "Bike": <BikeIcon className="h-8 w-8" />,
-    "Mini-Truck": <Truck className="h-8 w-8" />
+    "BIKE": <BikeIcon className="h-8 w-8" />,
+    "MINI_TRUCK": <Truck className="h-8 w-8" />
 }
 
 export const userRoleIconMap: {
@@ -33,6 +34,7 @@ export const userRoleIconMap: {
 export const vehicles: Vehicle[] = [
     {
         name: "Bike",
+        id: "BIKE",
         price: 200,
         perKmCost: 20,
         capacity: "1 cubic meter",
@@ -41,6 +43,7 @@ export const vehicles: Vehicle[] = [
     },
     {
         name: "Mini-Truck",
+        id: "MINI_TRUCK",
         price: 800,
         perKmCost: 50,
         capacity: "7-8 cubic meters",

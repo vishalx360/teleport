@@ -23,20 +23,20 @@ export default function OnBoardingPage() {
                         <CardTitle className="text-2xl font-bold mt-2">
                             <Package className="inline" /> Teleport
                         </CardTitle>
-                        <Button variant="ghost" className="flex items-center gap-4">
+                        <div className="flex gap-4 justify-center items-center">
                             <div className="text-right">
                                 <p className="font-bold">
                                     {status === "loading" ? "Loading..." : session?.user.name}
                                 </p>
-                                <p className="capitalize bg-blue-500 text-white rounded-xl w-fit px-4">
-                                    {String(session?.user.role).toLowerCase()}
-                                </p>
+                                {session?.user.role && <p className="font-bold">
+                                    {session?.user.role}
+                                </p>}
+                                <button variant={"ghost"} className="text-red-600" onClick={signOut}>
+                                    Logout
+                                </button>
                             </div>
-                            <Button variant={"ghost"} className="text-red-600" onClick={signOut}>
-                                Logout
-                            </Button>
                             <UserCircle />
-                        </Button>
+                        </div>
                     </div>
                     <CardDescription className="text-sm text-gray-600">
                         Send anything, anywhere

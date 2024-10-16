@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import useBookingStore from '@/context/BookingStore'
 import { vehicleIconMap, vehicles } from '@/lib/constants'
+import { api } from '@/trpc/react'
 import { ArrowRight, Clock } from "lucide-react"
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 // Default values for props
 const defaultCheckoutData = {
@@ -59,7 +61,7 @@ export default function CheckoutPage({
     const formattedDiscount = `₹${discount.toFixed(2)}`
     const formattedFinalPrice = `₹${finalPrice.toFixed(2)}`;
 
-    const VehicleIcon = vehicleIconMap[selectedVehicle.name];
+    const VehicleIcon = vehicleIconMap[selectedVehicle.id];
     return (
         <div className="min-h-screen bg-gray-100 p-4">
             <Card className="max-w-md mx-auto">
@@ -137,9 +139,9 @@ export default function CheckoutPage({
                     </div>
                 </CardContent>
                 <CardFooter>
-                    <Button className="w-full bg-blue-500 hover:bg-blue-600 text-white py-6 text-lg">
-                        Make Payment | {formattedFinalPrice}
-                    </Button>
+                    <MakePaymentButton finalPrice={finalPrice}
+                        formattedFinalPrice={formattedFinalPrice}
+                    />
                 </CardFooter>
             </Card>
         </div>
@@ -147,19 +149,36 @@ export default function CheckoutPage({
 }
 
 
+function MakePaymentButton({ finalPrice, formattedFinalPrice }: { finalPrice: number; formattedFinalPrice: string; }) {
+    const { pickupAddress, deliveryAddress, distance, duration, selectedVehicle, } = useBookingStore();
+    const router = useRouter();
+    const { isPending, mutate } = api.user.makeBooking.useMutation({
+        onSuccess(booking, variables, context) {
+            toast.success("Booking made successfully");
+            router.push(`/bookings/${booking.id}`);
+        },
+        onError(error, variables, context) {
+            toast.error(error.message);
+        },
 
-{/* <div>
-                        <Label htmlFor="instructions">Instructions for delivery partner</Label>
-                        <Input id="instructions" placeholder="Add instructions (optional)" />
-                    </div> */}
+    });
+    function handleMakePayment() {
+        mutate({
+            deliveryAddressId: deliveryAddress?.id,
+            pickupAddressId: pickupAddress?.id,
+            vehicleId: selectedVehicle?.id,
+            distance: distance,
+            duration: duration,
+            price: finalPrice,
+        });
+    }
 
-{/* <div>
-                        <h3 className="font-semibold mb-2">Offers & Savings</h3>
-                        <Button variant="outline" className="w-full justify-between">
-                            Apply Coupon <ArrowRight className="h-4 w-4" />
-                        </Button>
-                        <div className="mt-2 p-2 bg-green-50 rounded-md">
-                            <p className="text-sm text-green-600">1 benefit applied</p>
-                            <p className="text-sm">{discountPercentage}% off - ₹{discountAmount} on delivery fee</p>
-                        </div>
-                    </div> */}
+    return (
+        <Button
+            loading={isPending}
+            onClick={handleMakePayment}
+            className="w-full bg-blue-500 hover:bg-blue-600 text-white py-6 text-lg">
+            Make Payment | {formattedFinalPrice}
+        </Button>
+    )
+}
