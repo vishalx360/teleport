@@ -1,15 +1,12 @@
 "use client"
 
 import { Button } from '@/components/ui/button';
-import { pusherClient } from '@/lib/pusherClient';
 import { api } from '@/trpc/react';
-import PusherListener from '../PusherListener';
 
 function TestPusher() {
     const { isPending, mutate } = api.user.testPusher.useMutation({
-        onSuccess(booking, variables, context) {
-            console.log(booking)
-            console.log(pusherClient.user)
+        onSuccess(data, variables, context) {
+            console.log(data)
         },
         onError(error, variables, context) {
             console.error(error.message);
@@ -18,7 +15,6 @@ function TestPusher() {
     });
     return (
         <div>
-            <PusherListener />
             <Button onClick={() => { mutate() }}>TestPusher</Button>
         </div>
     )

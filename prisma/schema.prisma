@@ -10,9 +10,10 @@ datasource db {
     url      = env("DATABASE_URL")
 }
 
-enum BookinStatus {
+enum BookingStatus {
     BOOKED
     ACCEPTED
+    ARRIVED
     PICKED_UP
     IN_TRANSIT
     DELIVERED
@@ -29,7 +30,7 @@ model Booking {
     driver   User?   @relation("driverBooking", fields: [driverId], references: [id])
     driverId String?
 
-    status BookinStatus @default(BOOKED)
+    status BookingStatus @default(BOOKED)
 
     pickupAddress   Address @relation("pickupAddress", fields: [pickupAddressId], references: [id])
     pickupAddressId String

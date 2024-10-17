@@ -6,6 +6,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { ArrowRight, InfoIcon, Package, UserCircle } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useState } from "react";
+import { api } from "@/trpc/react";
+import { Booking, BookingStatus } from "@prisma/client";
+import TimeAgo from 'react-timeago'
+import { inferRouterOutputs } from "@trpc/server";
+import { formattedStatus } from "../bookings/[bookingId]/page";
 
 export default function DashboardPage() {
 
@@ -67,63 +72,22 @@ function NewBookingSection() {
     </div>)
 }
 
-type Booking = {
-  id: number;
-  from: string;
-  to: string;
-  cost: number;
-  date: Date;
-}
-
 function PastbookingsSection() {
-  const [pastBookings, setPastBookings] = useState<Array<Booking>>([
-    {
-      id: 1,
-      from: "Home",
-      to: "Work",
-      cost: 200,
-      date: new Date()
-    },
-    {
-      id: 2,
-      from: "Home",
-      to: "Work",
-      cost: 200,
-      date: new Date()
-    },
-    {
-      id: 3,
-      from: "Home",
-      to: "Work",
-      cost: 200,
-      date: new Date()
-    },
-    {
-      id: 4,
-      from: "Home",
-      to: "Work",
-      cost: 200,
-      date: new Date()
-    },
-    {
-      id: 5,
-      from: "Home",
-      to: "Work",
-      cost: 200,
-      date: new Date()
-    },
-  ]);
+  const { data: pastBookings, isLoading, error } = api.user.getAllBookings.useQuery();
+  if (isLoading) return <p>Loading...</p>;
+
+  if (error) return <p>Error loading booking</p>;
   return (
     <div>
       <h3 className="font-bold text">
         Past Bookings
       </h3>
-      {pastBookings.length === 0 ? (
+      {pastBookings?.length === 0 ? (
         <div className="text-center text-sm text-gray-600 bg-gray-200 p-5 rounded-xl">No past bookings</div>
       ) : (
         <div className="overflow-y-scroll h-[50vh] flex mt-2 flex-col gap-4">
-          {pastBookings.map((booking) => (
-            <PastBookingCard key={booking.id} />
+          {pastBookings?.map((booking) => (
+            <PastBookingCard booking={booking} key={booking.id} />
           ))}
         </div>
       )}
@@ -131,22 +95,50 @@ function PastbookingsSection() {
   )
 }
 
-function PastBookingCard() {
+function PastBookingCard({ booking }: {
+  booking: {
+    pickupAddress: {
+      address: string;
+      nickname: string;
+      id: string;
+    };
+    deliveryAddress: {
+      address: string;
+      nickname: string;
+      id: string;
+    };
+  } & {
+    status: BookingStatus;
+    pickupAddressId: string;
+    deliveryAddressId: string;
+    distance: number;
+    duration: number;
+    price: number;
+    id: string;
+    userId: string;
+    driverId: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }
+}) {
   return (
-    <Link href="/booking/123" className="rounded-xl p-4 px-5 flex items-center justify-between h-auto w-full  transition-colors bg-gray-100 hover:bg-gray-200">
+    <Link
+      href={`/bookings/${booking.id}`}
+      className="rounded-xl p-4 px-5 flex items-center justify-between h-auto w-full transition-colors bg-gray-100 hover:bg-gray-200"
+    >
       <div>
-        <p className="font-bold text-sm ">
-          <Package className="inline h-4 w-4" /> Booking ID: #34234
+        <p className="font-bold text-md">
+          {booking.pickupAddress?.nickname} <ArrowRight className="inline" /> {booking.deliveryAddress.nickname}
         </p>
-        <h3 className="text-sm">
-          5 days ago
-        </h3>
-        <p className="text-xs text-gray-600">
-          From: Home, To: Work Rs. 200
-        </p>
+        <TimeAgo date={booking.createdAt} />
 
+        <p className="text-xs text-gray-600">
+          {formattedStatus[booking.status]}
+        </p>
       </div>
-      <InfoIcon />
+      <h1 className="font-bold text-lg">
+        ₹{booking.price}
+      </h1>
     </Link>
   )
 }

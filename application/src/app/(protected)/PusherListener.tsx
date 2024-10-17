@@ -1,9 +1,9 @@
 "use client";
 
 import { pusherClient } from '@/lib/pusherClient';
-import { UserNotification } from '@/server/api/trpc';
+import { type UserNotification } from '@/server/api/trpc';
 import { useSession } from 'next-auth/react';
-import { Channel } from 'pusher-js';
+import { type Channel } from 'pusher-js';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 
@@ -11,10 +11,11 @@ function PusherListener() {
     const { data: session } = useSession();
 
     useEffect(() => {
+        pusherClient.signin();
+
         let userChannel: Channel | null = null;
 
         if (session?.user.id) {
-
             pusherClient.user.bind(`notification`, async (data: UserNotification) => {
                 toast[data.type](data.message);
             });

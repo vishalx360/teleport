@@ -9,32 +9,35 @@ import { TRPCError } from "@trpc/server";
 
 export const userRouter = createTRPCRouter({
   testPusher: protectedProcedure
-    .mutation(async ({ ctx }) => {
-      // const responsex = await ctx.notify({
-      //   channel: `user-${ctx.session.user.id}`,
-      //   notification: {
-      //     message: "Test pusher",
-      //     type: "success"
-      //   },
-      // })
-      const response = await ctx.pusher.sendToUser(ctx.session.user.id, "notification", {
-        message: "Test pusher",
-        type: "success"
-      })
+    .mutation(async ({ ctx, input }) => {
+      const response = await ctx.pusher.trigger("booking", "UPDATE", {
+        message: "Booking updated"
+      });
       console.log(response);
-      return { message: "Pusher test success" };
+      return response;
     }),
-  pusherAuth: protectedProcedure
+  pusherUserAuth: protectedProcedure
     .input(z.string())
     .mutation(async ({ ctx, input }) => {
-      console.log(input);
       const response = ctx.pusher.authenticateUser(input, {
         id: ctx.session.user.id,
         user_info: ctx.session.user,
       });
-      console.log(response)
       return response;
     }),
+  pusherChannelAuth: protectedProcedure
+    .input(z.object({
+      socketId: z.string(),
+      channelName: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const response = ctx.pusher.authorizeChannel(input.socketId, input.channelName, {
+        user_id: ctx.session.user.id,
+        user_info: ctx.session.user,
+      });
+      return response;
+    }
+    ),
   setRole: protectedProcedure
     .input(userRoleSchema)
     .mutation(async ({ ctx, input }) => {
@@ -85,11 +88,56 @@ export const userRouter = createTRPCRouter({
           id: input,
           userId: ctx.session.user.id,
         },
+        include: {
+          deliveryAddress: {
+            select: {
+              id: true,
+              nickname: true,
+              address: true
+            }
+          },
+          pickupAddress: {
+            select: {
+              id: true,
+              nickname: true,
+              address: true
+            }
+          }
+        }
       });
+
       if (!booking) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found" });
       }
       return booking;
+    }),
+  getAllBookings: protectedProcedure
+    .query(async ({ ctx, input }) => {
+      const bookings = await ctx.db.booking.findMany({
+        where: {
+          userId: ctx.session.user.id,
+        },
+        include: {
+          deliveryAddress: {
+            select: {
+              id: true,
+              nickname: true,
+              address: true
+            }
+          },
+          pickupAddress: {
+            select: {
+              id: true,
+              nickname: true,
+              address: true
+            }
+          }
+        }
+      });
+      if (!bookings) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found" });
+      }
+      return bookings;
     }),
   saveAddress: protectedProcedure
     .input(addressSchema)
