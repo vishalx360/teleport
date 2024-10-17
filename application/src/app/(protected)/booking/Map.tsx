@@ -43,10 +43,7 @@ const Map = ({ points }: {
         if (mapRef.current && points.length) {
             // Add markers and fit the map to show them
             addMarkers(points);
-            setTimeout(() => {
-                drawCurvedLine(points);
-            }, 1000);
-
+            drawCurvedLine(points);
         }
     }, [points]);
 
@@ -112,30 +109,31 @@ const Map = ({ points }: {
                 ],
             },
         };
-
-        // Add the line layer to the map
-        if (mapRef.current?.getSource('curved-line')) {
-            mapRef.current?.getSource('curved-line').setData(lineGeoJSON);
-        } else {
-            mapRef.current?.addSource('curved-line', {
-                type: 'geojson',
-                data: lineGeoJSON,
-            });
-            mapRef.current?.addLayer({
-                id: 'curved-line',
-                type: 'line',
-                source: 'curved-line',
-                layout: {
-                    'line-cap': 'round',
-                    'line-join': 'round',
-                },
-                paint: {
-                    'line-color': '#888',
-                    'line-width': 4,
-                    'line-opacity': 0.75
-                },
-            });
-        }
+        mapRef.current.on('load', function () {
+            // Add the line layer to the map
+            if (mapRef.current?.getSource('curved-line')) {
+                mapRef.current?.getSource('curved-line').setData(lineGeoJSON);
+            } else {
+                mapRef.current?.addSource('curved-line', {
+                    type: 'geojson',
+                    data: lineGeoJSON,
+                });
+                mapRef.current?.addLayer({
+                    id: 'curved-line',
+                    type: 'line',
+                    source: 'curved-line',
+                    layout: {
+                        'line-cap': 'round',
+                        'line-join': 'round',
+                    },
+                    paint: {
+                        'line-color': '#888',
+                        'line-width': 4,
+                        'line-opacity': 0.75
+                    },
+                });
+            }
+        })
     };
     return <div ref={mapContainerRef} className="w-full h-full rounded-xl" />;
 };

@@ -1,4 +1,3 @@
-import useBookingStore from '@/context/BookingStore';
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import { Address } from "@prisma/client";
 import 'mapbox-gl/dist/mapbox-gl.css';

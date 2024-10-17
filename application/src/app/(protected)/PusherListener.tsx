@@ -12,9 +12,7 @@ function PusherListener() {
 
     useEffect(() => {
         pusherClient.signin();
-
         let userChannel: Channel | null = null;
-
         if (session?.user.id) {
             pusherClient.user.bind(`notification`, async (data: UserNotification) => {
                 toast[data.type](data.message);
@@ -30,6 +28,8 @@ function PusherListener() {
                 userChannel.unbind_all();
                 pusherClient.unsubscribe(`user-${session?.user.id}`);
             }
+            pusherClient.unbind_all();
+            pusherClient.user.unbind_all();
         };
     }, [session?.user.id]);
 

@@ -103,7 +103,7 @@ function BookingDetailsPage({ params }: {
                                     Booked <TimeAgo date={new Date(booking?.createdAt)} />
                                 </h4>
                             </div>
-                            <div >
+                            <div>
                                 <MapView
                                     pickupLocation={booking.pickupAddress}
                                     deliveryLocation={booking.deliveryAddress}
