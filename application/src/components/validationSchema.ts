@@ -22,6 +22,10 @@ export const locationSchema = z.object({
     latitude: z.number().min(-90, "Latitude must be at least -90").max(90, "Latitude must be at most 90"),
     longitude: z.number().min(-180, "Longitude must be at least -180").max(180, "Longitude must be at most 180"),
 });
+export const availablitySchema = z.object({
+    available: z.boolean(),
+    location: locationSchema.optional()
+});
 
 export const bookingSchema = z.object({
     vehicleId: z.string(),
