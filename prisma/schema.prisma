@@ -32,6 +32,8 @@ model Booking {
 
     status BookingStatus @default(BOOKED)
 
+    vehicleId String
+
     pickupAddress   Address @relation("pickupAddress", fields: [pickupAddressId], references: [id])
     pickupAddressId String
 

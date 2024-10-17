@@ -68,6 +68,7 @@ export const userRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const booking = await ctx.db.booking.create({
         data: {
+          vehicleId: input.vehicleId,
           userId: ctx.session.user.id,
           distance: input.distance,
           deliveryAddressId: input.deliveryAddressId,
@@ -89,20 +90,8 @@ export const userRouter = createTRPCRouter({
           userId: ctx.session.user.id,
         },
         include: {
-          deliveryAddress: {
-            select: {
-              id: true,
-              nickname: true,
-              address: true
-            }
-          },
-          pickupAddress: {
-            select: {
-              id: true,
-              nickname: true,
-              address: true
-            }
-          }
+          deliveryAddress: true,
+          pickupAddress: true
         }
       });
 

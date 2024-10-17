@@ -131,7 +131,7 @@ const EstimatedFare = () => {
 };
 
 export default function BookingPage() {
-    const { pickupAddress, deliveryAddress, selectedVehicle, setPickUpAddress, setDeliveryAddress } = useBookingStore();
+    const { pickupAddress, distance, calculating, duration, deliveryAddress, selectedVehicle, setPickUpAddress, setDeliveryAddress } = useBookingStore();
 
     return (
         <div className="min-h-screen bg-gray-100 p-4">
@@ -151,6 +151,9 @@ export default function BookingPage() {
                         <SafetyInfo />
                         : <>
                             <MapView
+                                calculating={calculating}
+                                distance={distance}
+                                duration={duration}
                                 pickupLocation={pickupAddress}
                                 deliveryLocation={deliveryAddress}
                             />

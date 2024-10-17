@@ -14,6 +14,8 @@ import { Channel } from "pusher-js"
 import { useEffect, useState } from 'react'
 import TimeAgo from 'react-timeago'
 import { toast } from "sonner"
+import MapView from "../../booking/MapView"
+import { vehicleIconMap } from "@/lib/constants"
 
 
 export const formattedStatus: Record<BookingStatus | "LOADING", string> = {
@@ -65,6 +67,7 @@ function BookingDetailsPage({ params }: {
 
     if (error) return <p>Error loading booking</p>;
     if (!booking && !isLoading) return <p>Booking not found</p>
+    const VehicleIcon = vehicleIconMap[booking?.vehicleId];
 
     const refreshEta = async () => {
         await refetch()
@@ -89,27 +92,37 @@ function BookingDetailsPage({ params }: {
                         </div>
                     ) : (
                         <>
-                            <div className="flex flex-row items-center gap-4">
-                                <p className="font-bold text-md">
-                                    {booking?.pickupAddress?.nickname} <ArrowRight className="inline" /> {booking?.deliveryAddress.nickname}
-                                </p>
-                                <h4 className="text-sm bg-gray-200 rounded-xl px-2 py-1 my-2 w-fit uppercase">{formattedStatus[booking?.status]}</h4>
+                            <div>
+                                <div className="flex flex-row items-center gap-4">
+                                    <p className="font-bold text-md">
+                                        {booking?.pickupAddress?.nickname} <ArrowRight className="inline" /> {booking?.deliveryAddress.nickname}
+                                    </p>
+                                    <h4 className="text-sm bg-gray-200 rounded-xl px-2 py-1 w-fit uppercase">{formattedStatus[booking?.status]}</h4>
+                                </div>
+                                <h4 className="">
+                                    Booked <TimeAgo date={new Date(booking?.createdAt)} />
+                                </h4>
                             </div>
-                            <div className="relative h-64 w-full rounded-lg overflow-hidden">
-                                <Image
-                                    src="/map.png"
-                                    alt="Map showing delivery route"
-                                    layout="fill"
-                                    objectFit="cover"
+                            <div >
+                                <MapView
+                                    pickupLocation={booking.pickupAddress}
+                                    deliveryLocation={booking.deliveryAddress}
+                                    distance={booking?.distance}
+                                    duration={booking?.duration}
                                 />
                             </div>
 
                             <div className="flex justify-between items-center">
-                                <div>
-                                    <h3 className="font-semibold">Finding Delivery Partner...</h3>
-                                    {lastUpdated && <p className="text-sm text-gray-500">Updated {" "}
-                                        <TimeAgo date={new Date(lastUpdated)} />
-                                    </p>}
+                                <div className="flex justify-between gap-4 items-center">
+                                    <div className="border p-2 border-gray-200 rounded-md">
+                                        {VehicleIcon}
+                                    </div>
+                                    <div>
+                                        <h3 className="font-semibold">Finding Delivery Partner...</h3>
+                                        {lastUpdated && <p className="text-sm text-gray-500">Updated {" "}
+                                            <TimeAgo date={new Date(lastUpdated)} />
+                                        </p>}
+                                    </div>
                                 </div>
                                 <Button
                                     size="sm" variant={"outline"} onClick={refreshEta}>

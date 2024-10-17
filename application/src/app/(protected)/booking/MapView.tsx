@@ -5,11 +5,15 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import Map from "./Map";
 
 
-const MapView = ({ pickupLocation, deliveryLocation }: {
+const MapView = ({ pickupLocation, deliveryLocation,
+    distance, duration, calculating
+}: {
     pickupLocation: Address;
     deliveryLocation: Address;
+    distance: number;
+    duration: number;
+    calculating: boolean;
 }) => {
-    const { distance, calculating, duration } = useBookingStore();
 
     return (
         <div className="relative h-48 w-full rounded-lg overflow-hidden">
