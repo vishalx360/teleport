@@ -30,11 +30,11 @@ async function processBooking(bookingData: Booking) {
         const driverId = driver[0];
 
         // Check if driver is available and not locked
-        const isLocked = await redis.get(`DRIVER_AVAILABILITY:${driverId}`);
+        const isLocked = await redis.get(`DRIVER_BUSY:${driverId}`);
         if (isLocked) continue;
 
         // Lock the driver for 10 seconds
-        await redis.setex(`DRIVER_AVAILABILITY:${driverId}`, 10, bookingId);
+        await redis.setex(`DRIVER_BUSY:${driverId}`, 10, bookingId);
 
         // Send notification to the driver
         await sendDriverNotification(driverId, bookingId);
@@ -58,7 +58,7 @@ async function processBooking(bookingData: Booking) {
             return;
         } else {
             // Unlock the driver and mark unavailable for this booking
-            await redis.del(`DRIVER_AVAILABILITY:${driverId}`);
+            await redis.del(`DRIVER_BUSY:${driverId}`);
             await redis.sadd(`unavailable-for-booking:${bookingId}`, driverId);
         }
     }
