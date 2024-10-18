@@ -290,8 +290,8 @@ importers:
   packages/database:
     dependencies:
       '@prisma/client':
-        specifier: ^5.10.2
-        version: 5.10.2(prisma@5.10.2)
+        specifier: ^5.21.1
+        version: 5.21.1(prisma@5.21.1)
     devDependencies:
       '@repo/eslint-config':
         specifier: workspace:*
@@ -303,8 +303,8 @@ importers:
         specifier: ^8.57.0
         version: 8.57.1
       prisma:
-        specifier: ^5.10.2
-        version: 5.10.2
+        specifier: ^5.21.1
+        version: 5.21.1
       rimraf:
         specifier: ^5.0.5
         version: 5.0.10

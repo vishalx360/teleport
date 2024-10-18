@@ -12,11 +12,12 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { GetAddressFromCoordinates } from "@/lib/geoUtils";
 import { api } from "@/trpc/react";
-import { MapPin, MapPinCheck, MapPinned, RadarIcon, RefreshCcw } from 'lucide-react';
+import { LucideInfo, MapPin, MapPinCheck, MapPinned, RadarIcon, RefreshCcw } from 'lucide-react';
 import { pusherClient } from '@/lib/pusherClient';
 import { Booking } from '@repo/database';
 import { useSession } from 'next-auth/react';
 import { vehicleClassMap, vehicles } from '@/lib/constants';
+import MapView from '../new-booking/MapView';
 
 export default function AcceptBookingsPage() {
   const { data: session, status } = useSession();
@@ -63,6 +64,7 @@ export default function AcceptBookingsPage() {
 
   const handleSetAvailablity = async (checked: boolean) => {
     try {
+      await updateDriverLocation(coords);
       const { available, message } = await setAvailablity({ available: checked });
       await refreshDriverAvailability();
       toast.success(message);
@@ -133,28 +135,42 @@ export default function AcceptBookingsPage() {
   );
 }
 
+type BookingRequest = {
+  booking: Booking;
+  acceptBefore: Date;
+  channel: string;
+};
+
 function FindingBookings() {
-  const [bookingRequest, setBookingRequest] = useState<Booking>();
+  const [bookingRequest, setBookingRequest] = useState<BookingRequest | null>(null);
 
   useEffect(() => {
-    pusherClient.user.bind(`driver-booking-request`, async (data: Booking) => {
-      setBookingRequest(data);
+    pusherClient.user.bind('driver-booking-request', (data: BookingRequest) => {
+      console.log({ data })
+      setBookingRequest({
+        ...data,
+        acceptBefore: new Date(data.acceptBefore),
+      });
+
     });
+
     return () => {
-      pusherClient.user.unbind(`driver-booking-request`);
+      pusherClient.user.unbind('driver-booking-request');
     };
   }, []);
 
   if (bookingRequest) {
-    return <BookingRequest booking={bookingRequest} />;
+    return <BookingRequestUI
+      request={bookingRequest}
+      setRequest={setBookingRequest}
+    />;
   }
+
   return (
     <div className='space-y-4 mt-5'>
       <div className="flex flex-col items-center justify-center gap-4 animate-pulse">
         <MapPinned className="w-16 h-16 mx-auto animate-pulse text-gray-300" />
-        <p>
-          Finding nearby bookings...
-        </p>
+        <p>Finding nearby bookings...</p>
       </div>
       <Skeleton className="h-8" />
       <Skeleton className="h-8" />
@@ -163,27 +179,107 @@ function FindingBookings() {
   );
 }
 
-function BookingRequest({ booking }: { booking: Booking }) {
+function BookingRequestUI({ request, setRequest }: { request: BookingRequest, setRequest: (request: BookingRequest | null) => void }) {
+  const { booking, acceptBefore, channel } = request;
+  const [timeLeft, setTimeLeft] = useState<number>(() => calculateTimeLeft(acceptBefore));
+  const [progress, setProgress] = useState<number>(100);
+  const { mutateAsync: sendBookingResponse, isPending: sendingBookingResponse } = api.driver.bookingResponse.useMutation();
+
+  useEffect(() => {
+    if (timeLeft <= 0) {
+      setRequest(null); // Clear request when time runs out
+      return;
+    }
+
+    const intervalId = setInterval(() => {
+      const remainingTime = calculateTimeLeft(acceptBefore);
+      setTimeLeft(remainingTime);
+
+      // Calculate progress percentage
+      const totalTime = acceptBefore.getTime() - new Date().getTime();
+      const percentage = (remainingTime / totalTime) * 100;
+      setProgress(Math.max(percentage, 0));
+
+      // Auto-clear the request when time expires
+      if (remainingTime <= 0) {
+        clearInterval(intervalId);
+        setRequest(null); // Clear the request after timeout
+      }
+    }, 1000); // Update every second
+
+    return () => clearInterval(intervalId); // Cleanup on unmount
+  }, [acceptBefore, timeLeft]);
+
+  const handleResponse = (accepted: boolean) => {
+    sendBookingResponse({
+      bookingId: booking.id,
+      accepted,
+      channel,
+    }).finally(() => {
+      setRequest(null);
+    })
+  };
+
+
   return (
     <div className='space-y-4 mt-5'>
-      <div className="flex flex-col items-center justify-center gap-4">
-        <MapPinCheck className="w-16 h-16 mx-auto text-green-500" />
-        <p>
-          New booking request received
-        </p>
+      <div className="flex flex-row items-center justify-center gap-4">
+        <LucideInfo className="inline" />
+        <p>New booking request received</p>
       </div>
+      {/* Map view */}
+      <MapView
+        pickupLocation={booking.pickupAddress}
+        deliveryLocation={booking.deliveryAddress}
+        distance={booking?.distance}
+        duration={booking?.duration}
+      />
+
+      {/* Booking information */}
       <div className="space-y-4">
-        <p className="text-lg font-bold">{booking.pickupAddress?.nickname} <MapPin className="inline" /> {booking.deliveryAddress?.nickname}</p>
+        <p className="text-lg font-bold">
+          {booking.pickupAddress?.nickname} <MapPin className="inline" /> {booking.deliveryAddress?.nickname}
+        </p>
+        <h1 className="font-bold text-lg">
+          ₹{booking.price}
+        </h1>
         <p>Distance: {booking.distance} km</p>
         <p>Duration: {booking.duration} mins</p>
       </div>
+
+      {/* Progress bar */}
+      <ProgressBar progress={progress} />
+
+      {/* Time left */}
+      <p className="text-sm text-red-500">Time left to accept: {Math.ceil(timeLeft / 1000)} seconds</p>
+
+      {/* Accept/Reject buttons */}
       <div className="flex gap-4">
-        <button className="btn btn-primary">Accept Booking</button>
-        <button className="btn btn-secondary">Reject</button>
+        <button className="btn btn-primary" onClick={() => { handleResponse(true) }}>Accept Booking</button>
+        <button className="btn btn-secondary" onClick={() => { handleResponse(true) }}>Reject</button>
       </div>
     </div>
   );
 }
+
+// Helper function to calculate time left in milliseconds
+function calculateTimeLeft(acceptBefore: Date): number {
+  const now = new Date().getTime();
+  return acceptBefore.getTime() - now;
+}
+
+// Simple progress bar component
+function ProgressBar({ progress }: { progress: number }) {
+  return (
+    <div className="w-full bg-gray-200 rounded h-2.5">
+      <div
+        className="bg-blue-600 h-2.5 rounded"
+        style={{ width: `${progress}%` }}
+      />
+    </div>
+  );
+}
+
 
 // const { latitude, longitude } = position.coords;
 

@@ -8,8 +8,9 @@ import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 
-const Map = ({ points }: {
-    points: { latitude: number, longitude: number, markerText: string }[]
+const Map = ({ points, extraPoints }: {
+    points: { latitude: number, longitude: number, markerText: string, inview: boolean }[];
+    extraPoints: { latitude: number, longitude: number, markerText: string, inview: boolean }[];
 }) => {
     const mapContainerRef = useRef(null);
     const mapRef = useRef(null);
@@ -42,7 +43,7 @@ const Map = ({ points }: {
     useEffect(() => {
         if (mapRef.current && points.length) {
             // Add markers and fit the map to show them
-            addMarkers(points);
+            addMarkers([...points, ...extraPoints]);
             drawCurvedLine(points);
         }
     }, [points]);
@@ -85,7 +86,7 @@ const Map = ({ points }: {
                 .addTo(mapRef.current);
 
             markerRefs.current.push(marker);
-            bounds.extend([longitude, latitude]);
+            { point.inview && bounds.extend([longitude, latitude]); }
         });
 
         if (!bounds.isEmpty()) {

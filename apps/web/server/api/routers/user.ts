@@ -79,6 +79,10 @@ export const userRouter = createTRPCRouter({
           price: input.price, // TODO: calculate in backend 
           duration: input.duration, // TODO: calculate in backend
         },
+        include: {
+          deliveryAddress: true,
+          pickupAddress: true
+        }
       });
       await ctx.kafkaProducer("BOOKINGS", booking);
       return booking;
@@ -96,6 +100,9 @@ export const userRouter = createTRPCRouter({
           pickupAddress: true
         }
       });
+      if (!booking) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found" });
+      }
       await ctx.kafkaProducer("BOOKINGS", booking);
       return booking
     }),
@@ -110,7 +117,8 @@ export const userRouter = createTRPCRouter({
         },
         include: {
           deliveryAddress: true,
-          pickupAddress: true
+          pickupAddress: true,
+          driver: true
         }
       });
 

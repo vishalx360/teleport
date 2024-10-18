@@ -1,17 +1,28 @@
-import { db as prisma } from "@repo/lib/db";
 import { redisClient as redis } from "@repo/lib/redisClient";
 import { pusherServer as pusher } from "@repo/lib/pusherServer";
-import { Booking } from "@prisma/client";
+import { BookingStatus, Booking } from "@repo/database";
+
+
 
 const RADIUS_TO_SEARCH = 10 * 1000; // 10km
+const DRIVER_RESPONSE_TIMEOUT = 20; // seconds
+const POLLING_INTERVAL = 2000; // 2 seconds
 
-// Process booking and start matchmaking
-async function processBooking(bookingData: Booking) {
-    console.log('Processing booking:', bookingData);
-    const { id: bookingId, pickupAddress, deliveryAddress, vehicleClass } = bookingData;
+async function processBooking(booking: Booking, commitMessage: () => void) {
+    console.log('Processing booking:', booking.id);
 
+    if (!booking) {
+        console.log('Booking not found:', booking);
+        commitMessage();
+        return;
+    }
+    // if (booking?.status !== BookingStatus.BOOKED) {
+    //     commitMessage();
+    //     return;
+    // }
+    const { vehicleClass, pickupAddress, } = booking;
+    console.log("finding drivers for vehicle class:", vehicleClass);
     // Get all nearest drivers from Redis based on vehicle type
-    // add vehicleid in key
     const drivers = await redis.georadius(
         `DRIVER_LOCATIONS:${vehicleClass}`,
         pickupAddress.longitude,
@@ -22,99 +33,75 @@ async function processBooking(bookingData: Booking) {
         'ASC'
     );
 
-    console.log(drivers)
-    return
+    console.log('Found drivers:', drivers);
 
-    // Iterate over drivers and start matchmaking
+    // Notify drivers one by one
     for (const driver of drivers) {
         const driverId = driver[0];
 
-        // Check if driver is available and not locked
+        // Check if the driver is available and not locked
         const isLocked = await redis.get(`DRIVER_BUSY:${driverId}`);
+        console.log('Driver:', driverId, 'isLocked:', isLocked);
         if (isLocked) continue;
 
-        // Lock the driver for 10 seconds
-        await redis.setex(`DRIVER_BUSY:${driverId}`, 10, bookingId);
+        // Check if this driver has already rejected this booking
+        const hasRejected = await redis.get(`DRIVER_REJECTED:${driverId}:${booking.id}`);
+        console.log('Driver:', driverId, 'hasRejected:', hasRejected);
+        if (hasRejected) continue;
 
-        // Send notification to the driver
-        await sendDriverNotification(driverId, bookingId);
+        // Lock the driver temporarily (e.g., 20 seconds)
+        await redis.setex(`DRIVER_BUSY:${driverId}`, DRIVER_RESPONSE_TIMEOUT, booking.id);
+        console.log('Driver:', driverId, 'locked for:', DRIVER_RESPONSE_TIMEOUT, 'seconds');
+        // Create a unique channel for the driver and booking request
+        const secureKey = Math.random().toString(36).substring(7);
+        const channel = `booking-response:${booking.id}:${driverId}:${secureKey}`;
+        console.log("Sending booking request to driver:", driverId, "on channel:", channel);
+        // Send booking request to the driver via WebSocket
+        await pusher.sendToUser(driverId, 'driver-booking-request', {
+            booking,
+            acceptBefore: new Date(Date.now() + DRIVER_RESPONSE_TIMEOUT * 1000),
+            channel
+        });
 
-        // Wait for driver's response (simulate with setTimeout or actual implementation)
-        const accepted = await waitForDriverResponse(driverId, bookingId);
+        // Wait for the driver's response asynchronously by subscribing to the Redis channel
+        const accepted = await pollForDriverResponse(channel, DRIVER_RESPONSE_TIMEOUT);
 
         if (accepted) {
-            // Mark driver as unavailable
-            await redis.srem(`available-drivers:${vehicleId}`, driverId);
-
-            // Update booking details
-            await prisma.booking.update({
-                where: { id: bookingId },
-                data: { status: 'accepted', driverId },
-            });
-
-            // Notify driver and user
-            await notifyDriverAndUser(driverId, bookingData);
-
+            commitMessage();
             return;
-        } else {
-            // Unlock the driver and mark unavailable for this booking
-            await redis.del(`DRIVER_BUSY:${driverId}`);
-            await redis.sadd(`unavailable-for-booking:${bookingId}`, driverId);
         }
+        // If driver rejected or timeout occurred, unlock the driver and continue
+        await redis.del(`DRIVER_BUSY:${driverId}`);
+        // mark this driver as rejected for this booking
     }
 
-    // If no drivers available
-    await prisma.booking.update({
-        where: { id: bookingId },
-        data: { status: 'failed' },
-    });
 
-    await notifyUserNoDriverAvailable(bookingData);
+
+    commitMessage();  // Commit after all attempts
+    return;
 }
 
-// Notify the driver using Pusher
-async function sendDriverNotification(driverId: string, bookingId: string) {
-    await pusher.trigger(`private-driver-${driverId}`, 'booking-request', {
-        bookingId,
-        message: 'New booking request',
-    });
-}
-
-// Simulate driver response waiting (actual implementation will depend on your application logic)
-async function waitForDriverResponse(driverId: string, bookingId: string): Promise<boolean> {
+// Function to poll for driver response via Redis key every 2 seconds
+async function pollForDriverResponse(responseKey: string, timeoutSeconds: number) {
     return new Promise((resolve) => {
-        setTimeout(() => {
-            // Simulate driver acceptance (true or false)
-            const accepted = Math.random() > 0.5;
-            resolve(accepted);
-        }, 5000);
+        let elapsed = 0;
+
+        const interval = setInterval(async () => {
+            elapsed += 2;
+
+            // Check if the driver has responded
+            const response = await redis.get(responseKey);
+
+            if (response === 'accepted') {
+                clearInterval(interval);
+                resolve(true);  // Driver accepted
+            } else if (response === 'rejected' || elapsed >= timeoutSeconds) {
+                clearInterval(interval);
+                resolve(false); // Driver rejected or timeout
+            }
+        }, POLLING_INTERVAL);  // Poll every 2 seconds
     });
 }
 
-// Notify driver and user of successful booking
-async function notifyDriverAndUser(driverId: string, bookingData: any) {
-    const userId = bookingData.userId;
-
-    await pusher.trigger(`private-driver-${driverId}`, 'booking-accepted', {
-        bookingId: bookingData.bookingId,
-        message: 'Booking accepted',
-    });
-
-    await pusher.trigger(`private-user-${userId}`, 'booking-update', {
-        bookingId: bookingData.bookingId,
-        status: 'accepted',
-    });
-}
-
-// Notify user of no driver availability
-async function notifyUserNoDriverAvailable(bookingData: any) {
-    const userId = bookingData.userId;
-
-    await pusher.trigger(`private-user-${userId}`, 'booking-update', {
-        bookingId: bookingData.bookingId,
-        status: 'failed',
-        message: 'No drivers available at the moment.',
-    });
-}
 
 export { processBooking };

@@ -1,5 +1,5 @@
-import { getDistanceAndDuration } from '@utils/getDistanceAndDuration';
 import { Vehicle, vehicles } from '@/lib/constants';
+import { getDistanceAndDuration } from '@/lib/geoUtils';
 import { Address } from '@repo/database';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
