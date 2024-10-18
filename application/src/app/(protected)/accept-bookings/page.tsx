@@ -14,8 +14,11 @@ import { api } from "@/trpc/react";
 import { MapPin, MapPinCheck, MapPinned, RadarIcon } from 'lucide-react';
 import { pusherClient } from '@/lib/pusherClient';
 import { Booking } from '@prisma/client';
+import { useSession } from 'next-auth/react';
+import { vehicleClassMap, vehicles } from '@/lib/constants';
 
 export default function AcceptBookingsPage() {
+  const { data: session, status } = useSession();
   const { coords, isGeolocationAvailable, positionError, isGeolocationEnabled, getPosition, timestamp } =
     useGeolocated({
       positionOptions: { enableHighAccuracy: false },
@@ -53,6 +56,7 @@ export default function AcceptBookingsPage() {
         toast.error("Failed to update availability.")
       });
   };
+  const vehicle = vehicleClassMap[session?.user.vehicleClass];
 
   return (
     <div className="min-h-screen bg-gray-100 p-4">
@@ -67,9 +71,43 @@ export default function AcceptBookingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="text-gray-600 space-y-2">
-            <p><strong> <MapPin className='inline' /> Current Location:</strong> {positionError ? `Error: ${positionError.message}` : (address || "Fetching location...")}</p>
-            {timestamp && <p className="text-sm text-gray-500">Updated <TimeAgo date={timestamp} /></p>}
+          {vehicle && <div>
+            <label className="block cursor-pointer">
+              <div
+                className={`flex items-center justify-between p-3 border rounded-lg ${false ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+                  }`}
+              >
+                <div className="flex items-center gap-5">
+                  <img src={vehicle.icon} alt={vehicle.name} className="h-10 w-10" />
+                  <div>
+                    <h4 className="font-medium">{vehicle.name}</h4>
+                    <p className="text-sm text-gray-600">{vehicle.description}</p>
+                    <p className="text-xs text-gray-600">Dimentions: {vehicle.dimensions}</p>
+                    <p className="text-xs text-gray-600">Max Weight: {vehicle.maxWeight}</p>
+                  </div>
+                </div>
+              </div>
+            </label>
+          </div>}
+
+          <div>
+            <label className="block cursor-pointer">
+              <div
+                className={`flex items-center justify-between p-3 border rounded-lg ${false ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+                  }`}
+              >
+                <div className="flex items-center gap-5">
+                  <div className="h-10 w-10" >
+                    <MapPin className="h-6 w-10" />
+                  </div>
+                  <div>
+                    <h4 className="font-medium">Current Location:</h4>
+                    <p className="text-sm text-gray-600"> {positionError ? `Error: ${positionError.message}` : (address || "Fetching location...")}</p>
+                    {timestamp && <p className="text-xs text-gray-500">Updated <TimeAgo date={timestamp} /></p>}
+                  </div>
+                </div>
+              </div>
+            </label>
           </div>
           <Label htmlFor="available" className={cn("flex items-center justify-between p-4 rounded-xl text-md transition-colors space-x-2", available ? "bg-blue-500 text-white" : "bg-gray-50")}>
             <span>I am Available for Bookings</span>
@@ -104,7 +142,6 @@ function FindingBookings() {
         <p>
           Finding nearby bookings...
         </p>
-
       </div>
       <Skeleton className="h-8" />
       <Skeleton className="h-8" />

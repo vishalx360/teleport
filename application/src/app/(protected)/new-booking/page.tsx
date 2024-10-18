@@ -7,7 +7,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Skeleton } from "@/components/ui/skeleton"
 import useBookingStore from "@/context/BookingStore"
-import { vehicleIconMap, vehicles } from "@/lib/constants"
+import { vehicles } from "@/lib/constants"
 import { AlertTriangle, Clock, DollarSign, Info, Package } from "lucide-react"
 import Link from "next/link"
 import MapView from "./MapView"
@@ -40,35 +40,35 @@ const SafetyInfo = () => (
 );
 
 // Vehicle Selection Component
-const VehicleSelection = () => {
-    const { distance, setSelectedVehicle, calculating, selectedVehicle } = useBookingStore();
+export const VehicleSelection = () => {
+    const { distance, setselectedVehicle, calculating, selectedVehicle } = useBookingStore();
 
     return (
         <div className="space-y-4">
             <h3 className="font-semibold">Available Vehicles</h3>
             {vehicles.map((vehicle) => {
-                const VehicleIcon = vehicleIconMap[vehicle?.id];
-
                 return (
                     <label key={vehicle.name} className="block cursor-pointer">
                         <div
                             className={`flex items-center justify-between p-3 border rounded-lg ${selectedVehicle?.name === vehicle.name ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
                                 }`}
-                            onClick={() => setSelectedVehicle(vehicle)}
+                            onClick={() => setselectedVehicle(vehicle)}
                         >
                             <div className="flex items-center space-x-3">
                                 <input
                                     type="radio"
                                     name="vehicle"
-                                    value={vehicle.name}
-                                    checked={selectedVehicle?.name === vehicle.name}
-                                    onChange={() => setSelectedVehicle(vehicle)}
+                                    value={vehicle.class}
+                                    checked={selectedVehicle?.class === vehicle.class}
+                                    onChange={() => setselectedVehicle(vehicle)}
                                     className="form-radio text-blue-600 hidden"
                                 />
-                                {VehicleIcon}
+                                <img src={vehicle.icon} alt={vehicle.name} className="h-10 w-10" />
                                 <div>
                                     <h4 className="font-medium">{vehicle.name}</h4>
-                                    <p className="text-sm text-gray-600">Weight Limit: {vehicle.weightLimit}</p>
+                                    <p className="text-sm text-gray-600">{vehicle.description}</p>
+                                    <p className="text-sm text-gray-600">{vehicle.dimensions}</p>
+                                    <p className="text-sm text-gray-600">Weight Limit: {vehicle.maxWeight}</p>
                                     <p className="text-sm">₹{vehicle.perKmCost}/Km</p>
                                 </div>
                             </div>
@@ -91,9 +91,8 @@ const VehicleSelection = () => {
                                     <PopoverContent className="w-80">
                                         <div className="space-y-2">
                                             <h5 className="font-semibold">{vehicle.name} Details</h5>
-                                            <p className="text-sm">Capacity: {vehicle.capacity}</p>
                                             <p className="text-sm">Dimensions: {vehicle.dimensions}</p>
-                                            <p className="text-sm">Weight Limit: {vehicle.weightLimit}</p>
+                                            <p className="text-sm">Weight Limit: {vehicle.maxWeight}</p>
                                         </div>
                                     </PopoverContent>
                                 </Popover>
@@ -163,7 +162,7 @@ export default function BookingPage() {
                     }
                 </CardContent>
                 <CardFooter>
-                    <Link className="w-full" href="/checkout" passHref>
+                    <Link className="w-full" href="/new-booking/checkout" passHref>
                         <Button disabled={!pickupAddress || !selectedVehicle || !deliveryAddress} className="w-full bg-blue-500 hover:bg-blue-600 text-white py-6 text-lg">
                             Book Now
                         </Button>

@@ -1,21 +1,29 @@
-import { db as prisma } from "@utils/db";
+// import { db as prisma } from "@utils/db";
 import { redisClient as redis } from "@utils/redisClient";
 import { pusherServer as pusher } from "@utils/pusherServer";
+import { Booking } from "@prisma/client";
+
+const RADIUS_TO_SEARCH = 10 * 1000; // 10km
 
 // Process booking and start matchmaking
-async function processBooking(bookingData: any) {
-    const { bookingId, pickup, dropoff, vehicleType } = bookingData;
+async function processBooking(bookingData: Booking) {
+    console.log('Processing booking:', bookingData);
+    const { id: bookingId, pickupAddress, deliveryAddress, vehicleId } = bookingData;
 
     // Get all nearest drivers from Redis based on vehicle type
+    // add vehicleid in key
     const drivers = await redis.georadius(
-        `drivers:${vehicleType}`,
-        pickup.longitude,
-        pickup.latitude,
-        10000, // radius in meters
+        `AVAILABLE_DRIVERS`,
+        pickupAddress.longitude,
+        pickupAddress.latitude,
+        RADIUS_TO_SEARCH, // radius in meters
         'm',
         'WITHDIST',
         'ASC'
     );
+
+    console.log(drivers)
+    return
 
     // Iterate over drivers and start matchmaking
     for (const driver of drivers) {
@@ -36,7 +44,7 @@ async function processBooking(bookingData: any) {
 
         if (accepted) {
             // Mark driver as unavailable
-            await redis.srem(`available-drivers:${vehicleType}`, driverId);
+            await redis.srem(`available-drivers:${vehicleId}`, driverId);
 
             // Update booking details
             await prisma.booking.update({

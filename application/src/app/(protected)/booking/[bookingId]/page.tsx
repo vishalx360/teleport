@@ -14,7 +14,7 @@ import { Channel } from "pusher-js"
 import { useEffect, useState } from 'react'
 import TimeAgo from 'react-timeago'
 import { toast } from "sonner"
-import MapView from "../../booking/MapView"
+import MapView from "../../new-booking/MapView"
 import { vehicleIconMap } from "@/lib/constants"
 
 

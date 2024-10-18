@@ -11,14 +11,14 @@ datasource db {
 }
 
 enum BookingStatus {
-    BOOKED
-    ACCEPTED
-    ARRIVED
-    PICKED_UP
-    IN_TRANSIT
-    DELIVERED
-    CANCELLED
-    FAILED
+    BOOKED // user has requested a booking
+    ACCEPTED // driver has accepted the booking
+    ARRIVED // driver has arrived at pickup location
+    PICKED_UP // driver has picked up the package
+    IN_TRANSIT // driver is on the way to delivery location
+    DELIVERED // driver has delivered the package
+    CANCELLED // booking was cancelled by user
+    FAILED // booking failed for some reason
 }
 
 model Booking {
@@ -32,7 +32,7 @@ model Booking {
 
     status BookingStatus @default(BOOKED)
 
-    vehicleId String
+    vehicleClass VehicleClass
 
     pickupAddress   Address @relation("pickupAddress", fields: [pickupAddressId], references: [id])
     pickupAddressId String
@@ -95,6 +95,12 @@ model Session {
     user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+enum VehicleClass {
+    BIKE
+    PICKUP_TRUCK
+    TRUCK
+}
+
 enum UserRoles {
     USER
     DRIVER
@@ -112,9 +118,12 @@ model User {
 
     role UserRoles?
 
-    addresses      Address[]
+    addresses Address[]
+
     userBookings   Booking[] @relation("userBooking")
     driverBookings Booking[] @relation("driverBooking")
+
+    vehicleClass VehicleClass?
 
     createdAt DateTime @default(now())
 }

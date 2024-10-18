@@ -4,7 +4,7 @@ import BackButton from '@/components/BackButton'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import useBookingStore from '@/context/BookingStore'
-import { vehicleIconMap, vehicles } from '@/lib/constants'
+import { vehicles } from '@/lib/constants'
 import { api } from '@/trpc/react'
 import { ArrowRight, Clock } from "lucide-react"
 import { useRouter } from 'next/navigation'
@@ -51,7 +51,7 @@ export default function CheckoutPage({
     const router = useRouter()
 
     if (pickupAddress === null || deliveryAddress === null || selectedVehicle === null) {
-        return router.push('/booking');
+        return router.push('/new-booking');
     };
     const price = selectedVehicle.perKmCost * distance;
     const discount = price * (discountPercentage / 100);
@@ -61,7 +61,6 @@ export default function CheckoutPage({
     const formattedDiscount = `₹${discount.toFixed(2)}`
     const formattedFinalPrice = `₹${finalPrice.toFixed(2)}`;
 
-    const VehicleIcon = vehicleIconMap[selectedVehicle.id];
     return (
         <div className="min-h-screen bg-gray-100 p-4">
             <Card className="max-w-md mx-auto">
@@ -96,7 +95,7 @@ export default function CheckoutPage({
                     <Card className="p-2 px-4">
                         <div className="flex items-center justify-between gap-5">
                             <div className="flex items-center gap-5">
-                                {VehicleIcon}
+                                <img src={selectedVehicle.icon} alt={selectedVehicle.name} className="h-10 w-10" />
                                 <div className=" items-center text-green-600">
                                     <span className="text-sm font-bold mr-2 text-gray-600">{selectedVehicle?.name}</span>
                                     <div className="flex items-center text-green-600">
@@ -155,7 +154,7 @@ function MakePaymentButton({ finalPrice, formattedFinalPrice }: { finalPrice: nu
     const { isPending, mutate } = api.user.makeBooking.useMutation({
         onSuccess(booking, variables, context) {
             toast.success("Booking made successfully");
-            router.push(`/bookings/${booking.id}`);
+            router.push(`/booking/${booking.id}`);
         },
         onError(error, variables, context) {
             toast.error(error.message);
@@ -166,7 +165,7 @@ function MakePaymentButton({ finalPrice, formattedFinalPrice }: { finalPrice: nu
         mutate({
             deliveryAddressId: deliveryAddress?.id,
             pickupAddressId: pickupAddress?.id,
-            vehicleId: selectedVehicle?.id,
+            vehicleClass: selectedVehicle?.class,
             distance: distance,
             duration: duration,
             price: finalPrice,

@@ -1,4 +1,4 @@
-import { getDistanceAndDuration } from '@/app/(protected)/booking/getDistanceAndDuration';
+import { getDistanceAndDuration } from '@utils/getDistanceAndDuration';
 import { Vehicle, vehicles } from '@/lib/constants';
 import { Address } from '@prisma/client';
 import { create } from 'zustand';
@@ -12,7 +12,7 @@ interface BookingStoreState {
     discountPercentage: number;
     calculating: boolean;
     selectedVehicle: Vehicle | null;
-    setSelectedVehicle: (vehicle: Vehicle) => void;
+    setselectedVehicle: (vehicle: Vehicle) => void;
     setPickUpAddress: (address: Address | null) => void;
     setDeliveryAddress: (address: Address | null) => void;
     updateDistanceAndDuration: () => Promise<void>;
@@ -28,7 +28,7 @@ const useBookingStore = create<BookingStoreState>()(
             discountPercentage: 10,
             calculating: false,
             selectedVehicle: vehicles[0] || null,
-            setSelectedVehicle: (vehicle: Vehicle) => set({ selectedVehicle: vehicle }),
+            setselectedVehicle: (vehicle: Vehicle) => set({ selectedVehicle: vehicle }),
             setPickUpAddress: (address) => {
                 set({ pickupAddress: address });
                 get().updateDistanceAndDuration();

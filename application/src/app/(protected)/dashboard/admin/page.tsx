@@ -2,62 +2,25 @@
 import Link from "next/link";
 
 import LinkButton from "@/components/LinkButton";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight, InfoIcon, Package, UserCircle } from "lucide-react";
-import { signOut, useSession } from "next-auth/react";
-import { useState } from "react";
 import { api } from "@/trpc/react";
-import { Booking, BookingStatus } from "@prisma/client";
-import TimeAgo from 'react-timeago'
-import { inferRouterOutputs } from "@trpc/server";
-import { formattedStatus } from "../bookings/[bookingId]/page";
+import { BookingStatus } from "@prisma/client";
+import { ArrowRight } from "lucide-react";
+import TimeAgo from 'react-timeago';
+import { formattedStatus } from "../../booking/[bookingId]/page";
 
-export default function DashboardPage() {
-
-  const { data: session, status } = useSession()
+export default function AdminDashboardPage() {
   return (
-    <div className="min-h-screen bg-gray-100 p-4">
-      <Card className="max-w-md mx-auto">
-        <CardHeader className='gap-2'>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-2xl font-bold mt-2">
-              <Package className="inline" /> Teleport
-            </CardTitle>
-            <div className="flex gap-4 justify-center items-center">
-              <div className="text-right">
-                <p className="font-bold">
-                  {status === "loading" ? "Loading..." : session?.user.name}
-                </p>
-                {session?.user.role && <p className="text-xs font-bold">
-                  {session?.user.role}
-                </p>}
-                <button variant={"ghost"} className="text-red-600" onClick={signOut}>
-                  Logout
-                </button>
-              </div>
-              <UserCircle />
-            </div>
-          </div>
-          <CardDescription className="text-sm text-gray-600">
-            Send anything, anywhere
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <NewBookingSection />
-          <PastbookingsSection />
-        </CardContent>
-        <CardFooter>
-
-        </CardFooter>
-      </Card>
-    </div>
+    <>
+      <NewBookingSection />
+      <PastbookingsSection />
+    </>
   );
 }
 
 function NewBookingSection() {
   return (
     <div >
-      <LinkButton href="/booking" variant={"outline"}
+      <LinkButton href="/new-booking" variant={"outline"}
         className="rounded-xl p-4 px-5 flex items-center justify-between h-auto w-full bg-blue-500 text-white hover:bg-blue-600 transition-colors hover:text-white">
         <div>
           <h3 className="font-bold text-xl">
@@ -123,7 +86,7 @@ function PastBookingCard({ booking }: {
 }) {
   return (
     <Link
-      href={`/bookings/${booking.id}`}
+      href={`/booking/${booking.id}`}
       className="rounded-xl p-4 px-5 flex items-center justify-between h-auto w-full transition-colors bg-gray-100 hover:bg-gray-200"
     >
       <div>

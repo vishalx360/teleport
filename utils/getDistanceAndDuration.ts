@@ -1,7 +1,16 @@
-import { env } from '@/env';
 import axios from 'axios';
+import { env } from './env';
+interface Coordinates {
+    latitude: number;
+    longitude: number;
+}
 
-export const getDistanceAndDuration = async (start, end) => {
+interface DistanceAndDuration {
+    distance: string;
+    duration: number;
+}
+
+export const getDistanceAndDuration = async (start: Coordinates, end: Coordinates): Promise<DistanceAndDuration> => {
     const mapboxAccessToken = env.NEXT_PUBLIC_MAPBOX_TOKEN; // Your Mapbox access token
     const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?access_token=${mapboxAccessToken}`;
 

@@ -16,7 +16,14 @@ export const locationModalSchema = addressSchema.extend({
 
 export const userRoleSchema = z.object({
     role: z.enum(["USER", "DRIVER"]),
-});
+    vehicleClass: z.string().optional()
+}).superRefine((data) => {
+    if (data.role === "DRIVER" && !data.vehicleClass) {
+        return { vehicleClass: "Vehicle class is required" }
+    }
+    return {};
+}
+);
 
 export const locationSchema = z.object({
     latitude: z.number().min(-90, "Latitude must be at least -90").max(90, "Latitude must be at most 90"),
@@ -28,7 +35,7 @@ export const availablitySchema = z.object({
 });
 
 export const bookingSchema = z.object({
-    vehicleId: z.string(),
+    vehicleClass: z.string(),
     pickupAddressId: z.string(),
     deliveryAddressId: z.string(),
     distance: z.number(),

@@ -6,6 +6,7 @@ import {
   protectedProcedure,
 } from "@/server/api/trpc";
 import { TRPCError } from "@trpc/server";
+import { type VehicleClass } from "@prisma/client";
 
 export const userRouter = createTRPCRouter({
   testPusher: protectedProcedure
@@ -52,12 +53,14 @@ export const userRouter = createTRPCRouter({
       if (user.role !== null) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Role already set" });
       }
+      console.log(input);
       await ctx.db.user.update({
         where: {
           id: ctx.session.user.id,
         },
         data: {
           role: input.role,
+          vehicleClass: input.vehicleClass ? input.vehicleClass as VehicleClass : null,
         },
       });
       return { message: "Role updated successfully" };
@@ -68,7 +71,7 @@ export const userRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const booking = await ctx.db.booking.create({
         data: {
-          vehicleId: input.vehicleId,
+          vehicleClass: input.vehicleClass as VehicleClass,
           userId: ctx.session.user.id,
           distance: input.distance,
           deliveryAddressId: input.deliveryAddressId,
@@ -79,6 +82,22 @@ export const userRouter = createTRPCRouter({
       });
       await ctx.kafkaProducer("BOOKINGS", booking);
       return booking;
+    }),
+  rebook: protectedProcedure
+    .input(z.string())
+    .mutation(async ({ ctx, input }) => {
+      const booking = await ctx.db.booking.findUnique({
+        where: {
+          id: input,
+          userId: ctx.session.user.id,
+        },
+        include: {
+          deliveryAddress: true,
+          pickupAddress: true
+        }
+      });
+      await ctx.kafkaProducer("BOOKINGS", booking);
+      return booking
     }),
 
   getBooking: protectedProcedure

@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { kafka } from "@utils/kafka";
+import { processBooking } from './processBooking';
 
 
 const consumer = kafka.consumer({ groupId: 'matchmaking-group' });
@@ -12,8 +13,8 @@ async function startConsumer() {
         eachMessage: async ({ topic, partition, message }) => {
             if (message.value) {
                 const bookingData = JSON.parse(message.value.toString());
-                console.log(bookingData);
-                // await processBooking(bookingData);
+                // console.log(bookingData);
+                await processBooking(bookingData);
             }
         },
     });

@@ -9,7 +9,8 @@ import GithubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
 
 import { env } from "@/env";
-import { db } from "@utils/db";
+import { db } from "@/lib/db";
+import { VehicleClass } from "@prisma/client";
 
 
 /**
@@ -28,11 +29,13 @@ declare module "next-auth" {
     user: {
       id: string;
       role: UserRole;
+      vehicleClass: VehicleClass | null
     } & DefaultSession["user"];
   }
 
   interface User {
     role: UserRole;
+    vehicleClass: VehicleClass | null
   }
 }
 
@@ -49,6 +52,7 @@ export const authOptions: NextAuthOptions = {
         ...session.user,
         id: user.id,
         role: user.role,
+        vehicleClass: user.vehicleClass,
       },
     }),
   },

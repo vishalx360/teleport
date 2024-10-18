@@ -14,7 +14,7 @@ import { ZodError } from "zod";
 import { pusherServer } from "@utils/pusherServer";
 import { redisClient } from "@utils/redisClient";
 import { getServerAuthSession } from "@/server/auth";
-import { db } from "@utils/db"
+import { db } from "@/lib/db"
 import { kafkaProducer } from "@/lib/kafkaProducer";
 
 export type UserNotification = {

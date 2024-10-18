@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { userRoleIconMap } from "@/lib/constants"
+import { userRoleIconMap, vehicles } from "@/lib/constants"
 import { Package } from "lucide-react"
 
 import { CardDescription } from "@/components/ui/card"
@@ -63,6 +63,8 @@ const UserRoleSelection = ({ updateSession }: {
 }) => {
     const router = useRouter();
     const [selectedRole, setSelectedRole] = useState("USER");
+    const [selectedVehicleClass, setSelectedVehicleClass] = useState("BIKE");
+
     const { isPending, mutate } = api.user.setRole.useMutation({
         onSuccess(data, variables, context) {
             toast.success(data.message);
@@ -75,41 +77,51 @@ const UserRoleSelection = ({ updateSession }: {
 
     });
     function handleSetRole() {
-        mutate({ role: selectedRole as any });
+        mutate({
+            role: selectedRole as any,
+            vehicleClass: selectedRole === "DRIVER" ? selectedVehicleClass : undefined
+        });
     }
     return (
         <div className="space-y-4">
-            <h3 className="font-semibold">Who are you ?</h3>
-            {Array.from(UserRoles).map((role) => {
-                const RoleIcon = userRoleIconMap[role];
-                return (
-                    <label key={role} className="block cursor-pointer">
-                        <div
-                            className={`flex items-center justify-between p-3 border rounded-lg ${selectedRole === role ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
-                                }`}
-                            onClick={() => setSelectedRole(role)}
-                        >
-                            <div className="flex items-center space-x-3">
-                                <input
-                                    type="radio"
-                                    name="vehicle"
-                                    value={role}
-                                    checked={selectedRole === role}
-                                    onChange={() => setSelectedRole(role)}
-                                    className="form-radio text-blue-600 hidden"
-                                />
-                                {RoleIcon}
-                                <div>
-                                    <p className="font-semibold">I am a {role.toLowerCase()}</p>
-                                    <p className="text-gray-500">
-                                        {role === "USER" ? "Send packages" : "Deliver packages"}
-                                    </p>
+            <h3 className="font-semibold" > Who are you ?</h3>
+            {
+                Array.from(UserRoles).map((role) => {
+                    const RoleIcon = userRoleIconMap[role];
+                    return (
+                        <label key={role} className="block cursor-pointer">
+                            <div
+                                className={`flex items-center justify-between p-3 border rounded-lg ${selectedRole === role ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+                                    }`}
+                                onClick={() => setSelectedRole(role)}
+                            >
+                                <div className="flex items-center space-x-3">
+                                    <input
+                                        type="radio"
+                                        name="vehicle"
+                                        value={role}
+                                        checked={selectedRole === role}
+                                        onChange={() => setSelectedRole(role)}
+                                        className="form-radio text-blue-600 hidden"
+                                    />
+                                    {RoleIcon}
+                                    <div>
+                                        <p className="font-semibold">I am a {role.toLowerCase()}</p>
+                                        <p className="text-gray-500">
+                                            {role === "USER" ? "Send packages" : "Deliver packages"}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </label>
-                )
-            })}
+                        </label>
+                    )
+                })
+            }
+
+            {
+                selectedRole === "DRIVER" && <VehicleSelection selectedVehicleClass={selectedVehicleClass} setSelectedVehicleClass={setSelectedVehicleClass} />
+            }
+
             <Button
                 onClick={handleSetRole}
                 disabled={isPending}
@@ -118,6 +130,57 @@ const UserRoleSelection = ({ updateSession }: {
                 <span>Continue</span>
                 <ArrowRight className="inline" />
             </Button>
+        </div >
+    )
+};
+
+
+// Vehicle Selection Component
+export const VehicleSelection = (
+    {
+        selectedVehicleClass,
+        setSelectedVehicleClass
+    }: {
+        selectedVehicleClass: string,
+        setSelectedVehicleClass: (vehicleClass: string) => void
+    }
+) => {
+
+    return (
+        <div className="space-y-4">
+            <h3 className="font-semibold">Select Your Vehicle</h3>
+            {vehicles.map((vehicle) => {
+                return (
+                    <label key={vehicle.name} className="block cursor-pointer">
+                        <div
+                            className={`flex items-center justify-between p-3 border rounded-lg ${selectedVehicleClass === vehicle.class ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+                                }`}
+                            onClick={() => setSelectedVehicleClass(vehicle.class)}
+                        >
+                            <div className="flex items-center space-x-3">
+                                <input
+                                    type="radio"
+                                    name="vehicle"
+                                    value={vehicle.class}
+                                    checked={selectedVehicleClass === vehicle.class}
+                                    onChange={() => setSelectedVehicleClass(vehicle.class)}
+                                    className="form-radio text-blue-600 hidden"
+                                />
+                                <img src={vehicle.icon} alt={vehicle.name} className="h-10 w-10" />
+                                <div>
+                                    <h4 className="font-medium">{vehicle.name}</h4>
+                                    <p className="text-sm text-gray-600">{vehicle.description}</p>
+                                    <p className="text-xs text-gray-600">Dimentions: {vehicle.dimensions}</p>
+                                    <p className="text-xs text-gray-600">Max Weight: {vehicle.maxWeight}</p>
+                                </div>
+                            </div>
+                            <div className="ml-auto ">
+                                <p className="font-semibold">₹{vehicle.perKmCost}/Km</p>
+                            </div>
+                        </div>
+                    </label>
+                )
+            })}
         </div>
     )
 };

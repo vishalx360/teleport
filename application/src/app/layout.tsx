@@ -1,10 +1,11 @@
 import "@/styles/globals.css";
-
 import { GeistSans } from "geist/font/sans";
+import Providers from "@/context/Providers";
 import { type Metadata } from "next";
 
 import { Toaster } from "@/components/ui/sonner";
-import Providers from "@/context/Providers";
+
+
 
 export const metadata: Metadata = {
   title: "Create T3 App",

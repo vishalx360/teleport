@@ -1,27 +1,9 @@
-import { BikeIcon, Truck, UserCog, UserIcon } from "lucide-react";
-
+import { type VehicleClass } from "@prisma/client";
+import { UserCog, UserIcon } from "lucide-react";
 
 export const DEFAULT_COORDINATES = [77.594566, 12.971599,]
 export const DEFAULT_ZOOM = 12;
 
-
-export type Vehicle = {
-    name: string;
-    id: string;
-    price: number;
-    perKmCost: number;
-    capacity: string;
-    dimensions: string;
-    weightLimit: string;
-}
-
-
-export const vehicleIconMap: {
-    [key: string]: JSX.Element
-} = {
-    "BIKE": <BikeIcon className="h-8 w-8" />,
-    "MINI_TRUCK": <Truck className="h-8 w-8" />
-}
 
 export const userRoleIconMap: {
     [key: string]: JSX.Element
@@ -30,24 +12,49 @@ export const userRoleIconMap: {
     "DRIVER": <UserCog className="h-8 w-8" />
 }
 
+export type Vehicle = {
+    class: VehicleClass;
+    name: string;
+    description: string;
+    icon: string;
+    perKmCost: number;
+    dimensions: string;
+    maxWeight: string;
+}
 
 export const vehicles: Vehicle[] = [
     {
+        class: "BIKE",
         name: "Bike",
-        id: "BIKE",
-        price: 200,
-        perKmCost: 20,
-        capacity: "1 cubic meter",
-        dimensions: "1.8m x 0.8m x 1.1m",
-        weightLimit: "150 kg"
+        description: "A two-wheeler for quick deliveries",
+        icon: "/vehicles/BIKE.svg",
+        perKmCost: 50,
+        dimensions: "40cm x 40cm x 40cm",
+        maxWeight: "20 kg"
     },
     {
-        name: "Mini-Truck",
-        id: "MINI_TRUCK",
-        price: 800,
-        perKmCost: 50,
-        capacity: "7-8 cubic meters",
-        dimensions: "3.5m x 2m x 2m",
-        weightLimit: "2000 kg"
+        class: "PICKUP_TRUCK",
+        name: "Pickup-Truck",
+        description: "A small truck for medium-sized deliveries",
+        icon: "/vehicles/PICKUP_TRUCK.svg",
+        perKmCost: 100,
+        dimensions: "6f x 7f x 4f",
+        maxWeight: "850 kg"
+    },
+    {
+        class: "TRUCK",
+        name: "Truck",
+        description: "A large truck for heavy deliveries",
+        icon: "/vehicles/TRUCK.svg",
+        perKmCost: 200,
+        dimensions: "10f x 7f x 6f",
+        maxWeight: "1700 kg"
     },
 ]
+
+export const vehicleClassMap: {
+    [key: string]: Vehicle
+} = vehicles.reduce((acc, vehicle) => {
+    acc[vehicle.class] = vehicle;
+    return acc;
+}, {} as { [key: string]: Vehicle });
