@@ -31,7 +31,6 @@ export const locationSchema = z.object({
 });
 export const availablitySchema = z.object({
     available: z.boolean(),
-    location: locationSchema.optional()
 });
 
 export const bookingSchema = z.object({

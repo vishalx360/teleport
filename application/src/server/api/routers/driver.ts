@@ -9,25 +9,33 @@ export const driverRouter = createTRPCRouter({
   setAvailablity: protectedProcedure
     .input(availablitySchema)
     .mutation(async ({ ctx, input }) => {
-      console.log(input);
       if (!input.available) {
-        await ctx.redis.zrem("AVAILABLE_DRIVERS", ctx.session.user.id);
+        await ctx.redis.del(`DRIVER_AVAILABILITY:${ctx.session.user.id}`);
+        await ctx.redis.zrem(`DRIVER_LOCATIONS:${ctx.session.user.vehicleClass}`, ctx.session.user.id);
         return { message: "Updated Availablity successfully", available: false };
       }
-      await ctx.redis.geoadd(
-        "AVAILABLE_DRIVERS",
-        input.location?.longitude,
-        input.location.latitude,
-        ctx.session.user.id);
+      await ctx.redis.set(
+        `DRIVER_AVAILABILITY:${ctx.session.user.id}`,
+        'true',
+        "EX", 30 * 60);
       return { message: "Updated Availablity successfully", available: true };
+    }),
+
+  updateLocation: protectedProcedure
+    .input(locationSchema)
+    .mutation(async ({ ctx, input }) => {
+      await ctx.redis.geoadd(
+        `DRIVER_LOCATIONS:${ctx.session.user.vehicleClass}`,
+        input.longitude,
+        input.latitude,
+        ctx.session.user.id
+      );
+      return { message: "Updated Location successfully" };
     }),
 
   getAvailablity: protectedProcedure
     .query(async ({ ctx }) => {
-      const location = await ctx.redis.geopos("AVAILABLE_DRIVERS", ctx.session.user.id);
-      if (!location) {
-        return { available: false };
-      }
-      return { available: true, location: { latitude: location[1], longitude: location[0] } };
+      const available = await ctx.redis.get(`DRIVER_AVAILABILITY:${ctx.session.user.id}`);
+      return { available: available === 'true' };
     }),
 });
