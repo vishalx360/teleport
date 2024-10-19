@@ -10,7 +10,7 @@ import GoogleProvider from "next-auth/providers/google";
 
 import { env } from "@/env";
 import { db } from "@repo/lib/db";
-import { VehicleClass } from "@repo/database";
+import { VehicleClass } from "@prisma/client";
 
 /**
  * User roles.

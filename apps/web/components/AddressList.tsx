@@ -2,7 +2,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import useBookingStore from "@/context/BookingStore";
 import { api } from '@/trpc/react';
-import { Address } from "@repo/database";
+import { Address } from "@prisma/client";
 import { LucideTrash } from "lucide-react";
 import { useState } from 'react';
 import { Button } from "./ui/button";

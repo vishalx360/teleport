@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { pusherClient } from "@/lib/pusherClient"
 import { cn } from "@/lib/utils"
 import { api } from '@/trpc/react'
-import { Booking, BookingStatus } from "@repo/database"
+import { Booking, BookingStatus } from "@prisma/client"
 import { ArrowRight, LucideCheck, LucideCircleX, MessageSquare, RefreshCw } from "lucide-react"
 import Image from "next/image"
 import { Channel } from "pusher-js"

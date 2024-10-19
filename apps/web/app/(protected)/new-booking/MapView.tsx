@@ -1,5 +1,5 @@
 import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
-import { Address } from "@repo/database";
+import { Address } from "@prisma/client";
 import 'mapbox-gl/dist/mapbox-gl.css';
 import Map from "./Map";
 

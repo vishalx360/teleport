@@ -8,7 +8,7 @@ import {
 } from "@/components/validationSchema";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { TRPCError } from "@trpc/server";
-import { BookingStatus, type VehicleClass } from "@repo/database";
+import { BookingStatus, type VehicleClass } from "@prisma/client";
 import { getDistanceAndDuration } from "@/lib/geoUtils";
 
 export const userRouter = createTRPCRouter({

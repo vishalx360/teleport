@@ -5,7 +5,7 @@ import {
 } from "@/components/validationSchema";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { z } from "zod";
-import { BookingStatus } from "@repo/database";
+import { BookingStatus } from "@prisma/client";
 import { getDistanceAndDuration } from "@/lib/geoUtils";
 
 export const driverRouter = createTRPCRouter({

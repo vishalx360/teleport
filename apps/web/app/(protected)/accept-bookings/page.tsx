@@ -14,7 +14,7 @@ import { GetAddressFromCoordinates } from "@/lib/geoUtils";
 import { api } from "@/trpc/react";
 import { LucideInfo, MapPin, MapPinCheck, MapPinned, RadarIcon, RefreshCcw } from 'lucide-react';
 import { pusherClient } from '@/lib/pusherClient';
-import { Booking } from '@repo/database';
+import { Booking } from '@prisma/client';
 import { useSession } from 'next-auth/react';
 import { vehicleClassMap, vehicles } from '@/lib/constants';
 import MapView from '../new-booking/MapView';

@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import LinkButton from "@/components/LinkButton";
 import { api } from "@/trpc/react";
-import { BookingStatus } from "@repo/database";
+import { BookingStatus } from "@prisma/client";
 import { ArrowRight } from "lucide-react";
 import TimeAgo from 'react-timeago';
 import PastbookingsSection from "@/components/PastbookingsSection";

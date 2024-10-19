@@ -2,7 +2,7 @@
 import Link from "next/link";
 
 import { api } from "@/trpc/react";
-import { BookingStatus } from "@repo/database";
+import { BookingStatus } from "@prisma/client";
 import { ArrowRight } from "lucide-react";
 import TimeAgo from 'react-timeago';
 import { formattedStatus } from "@/lib/constants";

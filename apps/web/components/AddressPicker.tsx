@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { Address } from "@repo/database";
+import { Address } from "@prisma/client";
 import { ArrowDown, ArrowUp, UserCircle2Icon } from "lucide-react";
 import { useState } from "react";
 import { AddAddress } from "./AddAddress";

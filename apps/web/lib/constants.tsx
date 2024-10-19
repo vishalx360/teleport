@@ -1,4 +1,4 @@
-import { BookingStatus, type VehicleClass } from "@repo/database";
+import { BookingStatus, type VehicleClass } from "@prisma/client";
 import { UserCog, UserIcon } from "lucide-react";
 
 export const DEFAULT_COORDINATES = [77.594566, 12.971599,]
