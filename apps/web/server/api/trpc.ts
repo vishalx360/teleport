@@ -26,10 +26,10 @@ export type UserNotification = {
 // notify message to the client
 async function notify({
   channel,
-  notification
+  notification,
 }: {
   channel: string;
-  notification: UserNotification
+  notification: UserNotification;
 }) {
   return await pusherServer.trigger(channel, "notification", notification);
 }
@@ -58,8 +58,6 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
     ...opts,
   };
 };
-
-
 
 /**
  * 2. INITIALIZATION

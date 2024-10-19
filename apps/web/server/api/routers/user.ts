@@ -1,22 +1,23 @@
 import { z } from "zod";
 
-import { addressSchema, bookingSchema, locationModalSchema, userRoleSchema } from "@/components/validationSchema";
 import {
-  createTRPCRouter,
-  protectedProcedure,
-} from "@/server/api/trpc";
+  addressSchema,
+  bookingSchema,
+  locationModalSchema,
+  userRoleSchema,
+} from "@/components/validationSchema";
+import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { TRPCError } from "@trpc/server";
 import { type VehicleClass } from "@repo/database";
 
 export const userRouter = createTRPCRouter({
-  testPusher: protectedProcedure
-    .mutation(async ({ ctx, input }) => {
-      const response = await ctx.pusher.trigger("booking", "UPDATE", {
-        message: "Booking updated"
-      });
-      console.log(response);
-      return response;
-    }),
+  testPusher: protectedProcedure.mutation(async ({ ctx, input }) => {
+    const response = await ctx.pusher.trigger("booking", "UPDATE", {
+      message: "Booking updated",
+    });
+    console.log(response);
+    return response;
+  }),
   pusherUserAuth: protectedProcedure
     .input(z.string())
     .mutation(async ({ ctx, input }) => {
@@ -27,10 +28,12 @@ export const userRouter = createTRPCRouter({
       return response;
     }),
   pusherChannelAuth: protectedProcedure
-    .input(z.object({
-      socketId: z.string(),
-      channelName: z.string(),
-    }))
+    .input(
+      z.object({
+        socketId: z.string(),
+        channelName: z.string(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const [channelType, channelName, key] = input.channelName.split("-");
       if (channelName === "booking") {
@@ -39,18 +42,25 @@ export const userRouter = createTRPCRouter({
             id: key,
             OR: [
               { userId: ctx.session.user.id },
-              { driverId: ctx.session.user.id }
-            ]
-          }
+              { driverId: ctx.session.user.id },
+            ],
+          },
         });
         if (isMember === 0) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "You are not allowed to access this channel" });
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "You are not allowed to access this channel",
+          });
         }
       }
-      const response = ctx.pusher.authorizeChannel(input.socketId, input.channelName, {
-        user_id: ctx.session.user.id,
-        user_info: ctx.session.user,
-      });
+      const response = ctx.pusher.authorizeChannel(
+        input.socketId,
+        input.channelName,
+        {
+          user_id: ctx.session.user.id,
+          user_info: ctx.session.user,
+        },
+      );
       return response;
     }),
   setRole: protectedProcedure
@@ -65,7 +75,10 @@ export const userRouter = createTRPCRouter({
         return { message: "User not found" };
       }
       if (user.role !== null) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Role already set" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Role already set",
+        });
       }
       console.log(input);
       await ctx.db.user.update({
@@ -74,7 +87,9 @@ export const userRouter = createTRPCRouter({
         },
         data: {
           role: input.role,
-          vehicleClass: input.vehicleClass ? input.vehicleClass as VehicleClass : null,
+          vehicleClass: input.vehicleClass
+            ? (input.vehicleClass as VehicleClass)
+            : null,
         },
       });
       return { message: "Role updated successfully" };
@@ -90,13 +105,13 @@ export const userRouter = createTRPCRouter({
           distance: input.distance,
           deliveryAddressId: input.deliveryAddressId,
           pickupAddressId: input.pickupAddressId,
-          price: input.price, // TODO: calculate in backend 
+          price: input.price, // TODO: calculate in backend
           duration: input.duration, // TODO: calculate in backend
         },
         include: {
           deliveryAddress: true,
-          pickupAddress: true
-        }
+          pickupAddress: true,
+        },
       });
       await ctx.kafkaProducer("BOOKINGS", booking);
       return booking;
@@ -111,14 +126,17 @@ export const userRouter = createTRPCRouter({
         },
         include: {
           deliveryAddress: true,
-          pickupAddress: true
-        }
+          pickupAddress: true,
+        },
       });
       if (!booking) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Booking not found",
+        });
       }
       await ctx.kafkaProducer("BOOKINGS", booking);
-      return booking
+      return booking;
     }),
 
   getBooking: protectedProcedure
@@ -132,52 +150,57 @@ export const userRouter = createTRPCRouter({
         include: {
           deliveryAddress: true,
           pickupAddress: true,
-          driver: true
-        }
+          driver: true,
+        },
       });
 
       if (!booking) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Booking not found",
+        });
       }
       const returnData = { booking };
       if (booking.driverId) {
-        const [lastUpdatedDriverLocation] = await ctx.redis.geopos(`DRIVER_LOCATIONS:${booking.vehicleClass}`, booking.driverId);
+        const [lastUpdatedDriverLocation] = await ctx.redis.geopos(
+          `DRIVER_LOCATIONS:${booking.vehicleClass}`,
+          booking.driverId,
+        );
         console.log(lastUpdatedDriverLocation);
         returnData.lastUpdatedDriverLocation = {
           longitude: lastUpdatedDriverLocation[0],
-          latitude: lastUpdatedDriverLocation[1]
+          latitude: lastUpdatedDriverLocation[1],
         };
       }
       return returnData;
     }),
-  getAllBookings: protectedProcedure
-    .query(async ({ ctx, input }) => {
-      const bookings = await ctx.db.booking.findMany({
-        where: {
-          userId: ctx.session.user.id,
-        },
-        include: {
-          deliveryAddress: {
-            select: {
-              id: true,
-              nickname: true,
-              address: true
-            }
+  getAllBookings: protectedProcedure.query(async ({ ctx, input }) => {
+    const bookings = await ctx.db.booking.findMany({
+      where: {
+        userId: ctx.session.user.id,
+      },
+      include: {
+        deliveryAddress: {
+          select: {
+            id: true,
+            nickname: true,
+            address: true,
           },
-          pickupAddress: {
-            select: {
-              id: true,
-              nickname: true,
-              address: true
-            }
-          }
-        }
-      });
-      if (!bookings) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found" });
-      }
-      return bookings;
-    }),
+        },
+        pickupAddress: {
+          select: {
+            id: true,
+            nickname: true,
+            address: true,
+          },
+        },
+      },
+    });
+    if (!bookings) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found" });
+    }
+    return bookings;
+  }),
   saveAddress: protectedProcedure
     .input(addressSchema)
     .mutation(async ({ ctx, input }) => {

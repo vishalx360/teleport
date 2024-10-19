@@ -12,7 +12,6 @@ import { env } from "@/env";
 import { db } from "@repo/lib/db";
 import { VehicleClass } from "@repo/database";
 
-
 /**
  * User roles.
  */
@@ -29,13 +28,13 @@ declare module "next-auth" {
     user: {
       id: string;
       role: UserRole;
-      vehicleClass: VehicleClass | null
+      vehicleClass: VehicleClass | null;
     } & DefaultSession["user"];
   }
 
   interface User {
     role: UserRole;
-    vehicleClass: VehicleClass | null
+    vehicleClass: VehicleClass | null;
   }
 }
 
@@ -66,7 +65,7 @@ export const authOptions: NextAuthOptions = {
       clientId: env.GOOGLE_CLIENT_ID,
       clientSecret: env.GOOGLE_CLIENT_SECRET,
       allowDangerousEmailAccountLinking: true,
-    })
+    }),
     /**
      * ...add more providers here.
      *

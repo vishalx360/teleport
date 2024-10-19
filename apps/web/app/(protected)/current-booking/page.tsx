@@ -18,7 +18,6 @@ import { vehicleClassMap, vehicles } from "@/lib/constants"
 import MapView, { Coordinates } from "../new-booking/MapView"
 import { useGeolocated } from "react-geolocated"
 import Map from "../new-booking/Map"
-import { useGeolocation } from "@uidotdev/usehooks";
 import useActiveLocation from "@/hooks/useActiveLocation"
 
 
