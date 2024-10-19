@@ -1,8 +1,21 @@
-import { type VehicleClass } from "@repo/database";
+import { BookingStatus, type VehicleClass } from "@repo/database";
 import { UserCog, UserIcon } from "lucide-react";
 
 export const DEFAULT_COORDINATES = [77.594566, 12.971599,]
 export const DEFAULT_ZOOM = 12;
+
+
+export const formattedStatus: Record<BookingStatus | "LOADING", string> = {
+    [BookingStatus.BOOKED]: "Booked",
+    [BookingStatus.ACCEPTED]: "Accepted",
+    [BookingStatus.ARRIVED]: "Arrived",
+    [BookingStatus.PICKED_UP]: "Picked Up",
+    [BookingStatus.IN_TRANSIT]: "In Transit",
+    [BookingStatus.DELIVERED]: "Delivered",
+    [BookingStatus.CANCELLED]: "Cancelled",
+    [BookingStatus.FAILED]: "Failed",
+    "LOADING": "Loading..."
+};
 
 
 export const userRoleIconMap: {

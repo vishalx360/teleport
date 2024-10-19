@@ -6,7 +6,7 @@ import { api } from "@/trpc/react";
 import { BookingStatus } from "@repo/database";
 import { ArrowRight } from "lucide-react";
 import TimeAgo from 'react-timeago';
-import { formattedStatus } from "../../booking/[bookingId]/page";
+import { formattedStatus } from "@/lib/constants";
 
 export default function AdminDashboardPage() {
   return (

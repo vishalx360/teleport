@@ -1,11 +1,11 @@
 'use client'
 import Link from "next/link";
 
-import { formattedStatus } from "@/app/(protected)/booking/[bookingId]/page";
 import { api } from "@/trpc/react";
 import { BookingStatus } from "@repo/database";
 import { ArrowRight } from "lucide-react";
 import TimeAgo from 'react-timeago';
+import { formattedStatus } from "@/lib/constants";
 
 export default function PastbookingsSection() {
     const { data: pastBookings, isLoading, error } = api.user.getAllBookings.useQuery();

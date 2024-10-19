@@ -15,22 +15,8 @@ import { useEffect, useState } from 'react'
 import TimeAgo from 'react-timeago'
 import { toast } from "sonner"
 import MapView, { Coordinates } from "../../new-booking/MapView"
-import { vehicleClassMap, vehicles } from "@/lib/constants"
+import { formattedStatus, vehicleClassMap, vehicles } from "@/lib/constants"
 import Map from "../../new-booking/Map"
-
-
-export const formattedStatus: Record<BookingStatus | "LOADING", string> = {
-    [BookingStatus.BOOKED]: "Booked",
-    [BookingStatus.ACCEPTED]: "Accepted",
-    [BookingStatus.ARRIVED]: "Arrived",
-    [BookingStatus.PICKED_UP]: "Picked Up",
-    [BookingStatus.IN_TRANSIT]: "In Transit",
-    [BookingStatus.DELIVERED]: "Delivered",
-    [BookingStatus.CANCELLED]: "Cancelled",
-    [BookingStatus.FAILED]: "Failed",
-    "LOADING": "Loading..."
-};
-
 
 
 function BookingDetailsPage({ params }: {

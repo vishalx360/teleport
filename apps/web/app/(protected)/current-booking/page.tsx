@@ -14,25 +14,13 @@ import { Channel } from "pusher-js"
 import { useEffect, useState } from 'react'
 import TimeAgo from 'react-timeago'
 import { toast } from "sonner"
-import { vehicleClassMap, vehicles } from "@/lib/constants"
+import { formattedStatus, vehicleClassMap, vehicles } from "@/lib/constants"
 import MapView, { Coordinates } from "../new-booking/MapView"
 import { useGeolocated } from "react-geolocated"
 import Map from "../new-booking/Map"
 import useActiveLocation from "@/hooks/useActiveLocation"
 import { getDistanceAndDuration } from "@/lib/geoUtils"
 
-
-export const formattedStatus: Record<BookingStatus | "LOADING", string> = {
-    [BookingStatus.BOOKED]: "Booked",
-    [BookingStatus.ACCEPTED]: "Accepted",
-    [BookingStatus.ARRIVED]: "Arrived",
-    [BookingStatus.PICKED_UP]: "Picked Up",
-    [BookingStatus.IN_TRANSIT]: "In Transit",
-    [BookingStatus.DELIVERED]: "Delivered",
-    [BookingStatus.CANCELLED]: "Cancelled",
-    [BookingStatus.FAILED]: "Failed",
-    "LOADING": "Loading..."
-};
 
 function CurrentBookingPage() {
     const { data, isLoading, error, isRefetching, dataUpdatedAt, refetch } = api.driver.getCurrentBooking.useQuery();
