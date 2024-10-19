@@ -14,9 +14,9 @@ export const sharedEnvTypes = {
     },
     client: {
         NEXT_PUBLIC_PUSHER_KEY: z.string(),
-        NEXT_PUBLIC_PUSHER_URL: z.string(),
-        NEXT_PUBLIC_PUSHER_PORT: z.string(),
+        // NEXT_PUBLIC_PUSHER_URL: z.string(),
         NEXT_PUBLIC_PUSHER_CLUSTER: z.string(),
+        // NEXT_PUBLIC_PUSHER_PORT: z.string(),
         NEXT_PUBLIC_MAPBOX_TOKEN: z.string(),
     },
 };

@@ -14,9 +14,12 @@ import { Channel } from "pusher-js"
 import { useEffect, useState } from 'react'
 import TimeAgo from 'react-timeago'
 import { toast } from "sonner"
-import MapView, { Coordinates } from "../../new-booking/MapView"
 import { vehicleClassMap, vehicles } from "@/lib/constants"
-import Map from "../../new-booking/Map"
+import MapView, { Coordinates } from "../new-booking/MapView"
+import { useGeolocated } from "react-geolocated"
+import Map from "../new-booking/Map"
+import { useGeolocation } from "@uidotdev/usehooks";
+import useActiveLocation from "@/hooks/useActiveLocation"
 
 
 export const formattedStatus: Record<BookingStatus | "LOADING", string> = {
@@ -31,52 +34,52 @@ export const formattedStatus: Record<BookingStatus | "LOADING", string> = {
     "LOADING": "Loading..."
 };
 
-
-
-function BookingDetailsPage({ params }: {
-    params: {
-        bookingId: string
-    }
-}) {
-    const { bookingId } = params;
-    const { data, isLoading, error, isRefetching, dataUpdatedAt, refetch } = api.user.getBooking.useQuery(bookingId);
-    const { booking, lastUpdatedDriverLocation } = data ?? {}
-    const [lastUpdated, setLastUpdated] = useState(dataUpdatedAt)
-    const [latestDriverLocation, setLatestDriverLocation] = useState<Coordinates | null>(null)
-    const driverLocation = latestDriverLocation ?? lastUpdatedDriverLocation
-
-    console.log({
-        driverLocation,
-        lastUpdatedDriverLocation,
-        latestDriverLocation
-    })
+function useBookingChannel(bookingId: string, updater: () => void) {
     useEffect(() => {
-        setLastUpdated(dataUpdatedAt)
-    }, [dataUpdatedAt])
-
-    useEffect(() => {
+        if (!bookingId) return
         let bookingChannel: Channel | null = null;
         const channelName = `private-booking-${bookingId}`;
 
-        if (bookingId) {
-            console.log("Subscribing to channel", channelName);
-            bookingChannel = pusherClient.subscribe(channelName);
-            bookingChannel.bind("UPDATE", async (data) => {
-                await refetch();
-                toast.success(data.message);
-            });
-            bookingChannel.bind("DRIVER_LOCATION", async (data) => {
-                console.log("Driver Location Updated", data);
-                setLatestDriverLocation(data);
-            });
-        }
+        console.log("Subscribing to channel", channelName);
+        bookingChannel = pusherClient.subscribe(channelName);
+        bookingChannel.bind("UPDATE", async (data) => {
+            await updater();
+            toast.success(data.message);
+        });
         return () => {
             if (bookingChannel) {
                 bookingChannel.unbind_all();
                 pusherClient.unsubscribe(channelName);
             }
         };
-    }, []);
+    }, [bookingId]);
+}
+
+function CurrentBookingPage() {
+    const { data: booking, isLoading, error, isRefetching, dataUpdatedAt, refetch } = api.driver.getCurrentBooking.useQuery();
+    const [lastUpdated, setLastUpdated] = useState(dataUpdatedAt)
+    const driverLocation = useActiveLocation({
+        updateInterval: 30,
+        distanceThreshold: 200
+    });
+
+
+    useBookingChannel(booking?.id, refetch);
+
+    const { mutateAsync: updateLocation, isPending: updatingLocation } = api.driver.updateLocation.useMutation();
+
+    useEffect(() => {
+        if (!driverLocation?.latitude || !driverLocation?.longitude) return;
+        updateLocation({
+            latitude: driverLocation.latitude,
+            longitude: driverLocation.longitude,
+            bookingId: booking?.id
+        });
+    }, [driverLocation, booking]);
+
+    useEffect(() => {
+        setLastUpdated(dataUpdatedAt)
+    }, [dataUpdatedAt])
 
     if (error) return <p>Error loading booking</p>;
     if (!booking && !isLoading) return <p>Booking not found</p>
@@ -103,7 +106,7 @@ function BookingDetailsPage({ params }: {
                             {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
                         </div>
                     ) : (
-                        <div>
+                        <>
                             <div>
                                 <div className="flex flex-row items-center gap-4">
                                     <p className="font-bold text-md">
@@ -129,7 +132,7 @@ function BookingDetailsPage({ params }: {
                                             {
                                                 latitude: driverLocation.latitude,
                                                 longitude: driverLocation.longitude,
-                                                icon: "/driver.svg",
+                                                icon: "/location.svg",
                                                 inview: true
                                             },
                                             {
@@ -216,7 +219,7 @@ function BookingDetailsPage({ params }: {
                                 </Button>
                             </div>
 
-                        </div>
+                        </>
                     )}
                 </CardContent>
             </Card>
@@ -227,7 +230,6 @@ function BookingDetailsPage({ params }: {
 function CurrentStatusText({ booking }: { booking: Booking }) {
     if (booking.status === BookingStatus.BOOKED) {
         return (
-
             <div>
                 <h4 className="">
                     Finding Delivery Partner.
@@ -236,14 +238,13 @@ function CurrentStatusText({ booking }: { booking: Booking }) {
                     Please wait.
                 </h4>
             </div>
-
         )
     } else if (booking.status === BookingStatus.ACCEPTED) {
         // const {dis} = getDistanceAndDuration(booking.pickupAddress, booking.deliveryAddress)
         return (
             <div>
                 <h4 className="">
-                    {booking.driver.name} is on the way.
+                    Move to the pickup location.
                 </h4>
                 <h4 className="">
                     Arriving in X mins
@@ -254,7 +255,7 @@ function CurrentStatusText({ booking }: { booking: Booking }) {
         return (
             <div>
                 <h4 className="">
-                    {booking.driver.name} has arrived.
+                    You have arrived.
                 </h4>
                 <h4 className="">
                     Booked <TimeAgo date={new Date(booking.createdAt)} />
@@ -266,7 +267,7 @@ function CurrentStatusText({ booking }: { booking: Booking }) {
         return (
             <div>
                 <h4 className="">
-                    {booking.driver.name} has picked up the package.
+                    Move to the delivery location.
                 </h4>
                 <h4 className="">
                     Booked <TimeAgo date={new Date(booking.createdAt)} />
@@ -277,7 +278,7 @@ function CurrentStatusText({ booking }: { booking: Booking }) {
         return (
             <div>
                 <h4 className="">
-                    {booking.driver.name} is in transit.
+                    You are in transit.
                 </h4>
                 <h4 className="">
                     Booked <TimeAgo date={new Date(booking.createdAt)} />
@@ -288,7 +289,7 @@ function CurrentStatusText({ booking }: { booking: Booking }) {
         return (
             <div>
                 <h4 className="">
-                    Delivered by {booking.driver.name}.
+                    You have delivered the package.
                 </h4>
                 <h4 className="">
                     Booked <TimeAgo date={new Date(booking.createdAt)} />
@@ -335,4 +336,4 @@ function CurrentStatusText({ booking }: { booking: Booking }) {
 
 }
 
-export default BookingDetailsPage
+export default CurrentBookingPage

@@ -40,12 +40,11 @@ export const env = createEnv({
    */
   client: {
     NEXT_PUBLIC_MAPBOX_TOKEN: z.string(),
-
     NEXT_PUBLIC_PUSHER_KEY: z.string(),
     NEXT_PUBLIC_PUSHER_CLUSTER: z.string(),
 
-    NEXT_PUBLIC_PUSHER_URL: z.string(),
-    NEXT_PUBLIC_PUSHER_PORT: z.string(),
+    // NEXT_PUBLIC_PUSHER_URL: z.string(),
+    // NEXT_PUBLIC_PUSHER_PORT: z.string(),
   },
 
   /**
@@ -68,8 +67,8 @@ export const env = createEnv({
     NEXT_PUBLIC_PUSHER_CLUSTER: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
     PUSHER_APP_ID: process.env.PUSHER_APP_ID,
     PUSHER_SECRET: process.env.PUSHER_SECRET,
-    NEXT_PUBLIC_PUSHER_URL: process.env.NEXT_PUBLIC_PUSHER_URL,
-    NEXT_PUBLIC_PUSHER_PORT: process.env.NEXT_PUBLIC_PUSHER_PORT,
+    // NEXT_PUBLIC_PUSHER_URL: process.env.NEXT_PUBLIC_PUSHER_URL,
+    // NEXT_PUBLIC_PUSHER_PORT: process.env.NEXT_PUBLIC_PUSHER_PORT,
     KAFKA_URL: process.env.KAFKA_URL,
   },
   /**

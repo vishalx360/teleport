@@ -32,13 +32,27 @@ export const userRouter = createTRPCRouter({
       channelName: z.string(),
     }))
     .mutation(async ({ ctx, input }) => {
+      const [channelType, channelName, key] = input.channelName.split("-");
+      if (channelName === "booking") {
+        const isMember = await ctx.db.booking.count({
+          where: {
+            id: key,
+            OR: [
+              { userId: ctx.session.user.id },
+              { driverId: ctx.session.user.id }
+            ]
+          }
+        });
+        if (isMember === 0) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "You are not allowed to access this channel" });
+        }
+      }
       const response = ctx.pusher.authorizeChannel(input.socketId, input.channelName, {
         user_id: ctx.session.user.id,
         user_info: ctx.session.user,
       });
       return response;
-    }
-    ),
+    }),
   setRole: protectedProcedure
     .input(userRoleSchema)
     .mutation(async ({ ctx, input }) => {
@@ -79,6 +93,10 @@ export const userRouter = createTRPCRouter({
           price: input.price, // TODO: calculate in backend 
           duration: input.duration, // TODO: calculate in backend
         },
+        include: {
+          deliveryAddress: true,
+          pickupAddress: true
+        }
       });
       await ctx.kafkaProducer("BOOKINGS", booking);
       return booking;
@@ -96,6 +114,9 @@ export const userRouter = createTRPCRouter({
           pickupAddress: true
         }
       });
+      if (!booking) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found" });
+      }
       await ctx.kafkaProducer("BOOKINGS", booking);
       return booking
     }),
@@ -110,14 +131,24 @@ export const userRouter = createTRPCRouter({
         },
         include: {
           deliveryAddress: true,
-          pickupAddress: true
+          pickupAddress: true,
+          driver: true
         }
       });
 
       if (!booking) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found" });
       }
-      return booking;
+      const returnData = { booking };
+      if (booking.driverId) {
+        const [lastUpdatedDriverLocation] = await ctx.redis.geopos(`DRIVER_LOCATIONS:${booking.vehicleClass}`, booking.driverId);
+        console.log(lastUpdatedDriverLocation);
+        returnData.lastUpdatedDriverLocation = {
+          longitude: lastUpdatedDriverLocation[0],
+          latitude: lastUpdatedDriverLocation[1]
+        };
+      }
+      return returnData;
     }),
   getAllBookings: protectedProcedure
     .query(async ({ ctx, input }) => {

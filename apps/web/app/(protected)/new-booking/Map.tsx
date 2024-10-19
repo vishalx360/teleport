@@ -1,6 +1,6 @@
 
 import mapboxgl from 'mapbox-gl';
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 import { env } from "@/env";
 import { DEFAULT_COORDINATES } from '@/lib/constants';
@@ -8,8 +8,16 @@ import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
 
-const Map = ({ points }: {
-    points: { latitude: number, longitude: number, markerText: string }[]
+type Point = {
+    latitude: number;
+    longitude: number;
+    icon: string;
+    inview?: boolean;
+};
+
+const Map = ({ points, lines }: {
+    points: Point[];
+    lines: [[Point, Point]];
 }) => {
     const mapContainerRef = useRef(null);
     const mapRef = useRef(null);
@@ -25,7 +33,7 @@ const Map = ({ points }: {
                 container: mapContainerRef.current,
                 style: 'mapbox://styles/mapbox/streets-v12',
                 center: DEFAULT_COORDINATES,
-                zoom: 14,
+                zoom: 20,
             });
         }
 
@@ -41,11 +49,10 @@ const Map = ({ points }: {
 
     useEffect(() => {
         if (mapRef.current && points.length) {
-            // Add markers and fit the map to show them
             addMarkers(points);
-            drawCurvedLine(points);
+            lines?.forEach(line => drawLine(line));
         }
-    }, [points]);
+    }, [points, lines]);
 
 
     const addMarkers = (points) => {
@@ -60,68 +67,61 @@ const Map = ({ points }: {
             const { latitude, longitude, markerText } = point;
 
             // Create a custom HTML element for the marker
-            const markerElement = document.createElement('div');
-            markerElement.className = 'custom-marker';
-            markerElement.innerHTML = `
-                <div style="display: flex; align-items: center;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/>
-                        <circle cx="12" cy="10" r="3"/>
-                    </svg>
-                    <span style="margin-left: 4px; color: black; font-size: 12px;">${markerText}</span>
-                </div>
-            `;
-
-            // Apply additional styles to the marker container
-            markerElement.style.background = 'white';
-            markerElement.style.padding = '4px 8px';
-            markerElement.style.borderRadius = '4px';
-            markerElement.style.display = 'flex';
-            markerElement.style.alignItems = 'center';
-            markerElement.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.2)';
+            const markerElement = document.createElement('img');
+            markerElement.src = point.icon;
 
             const marker = new mapboxgl.Marker({ element: markerElement })
                 .setLngLat([longitude, latitude])
                 .addTo(mapRef.current);
 
             markerRefs.current.push(marker);
-            bounds.extend([longitude, latitude]);
+            { point.inview && bounds.extend([longitude, latitude]); }
         });
 
         if (!bounds.isEmpty()) {
             mapRef.current.fitBounds(bounds, { padding: 50, maxZoom: 12 });
         }
     };
-    const drawCurvedLine = (points) => {
-        if (points.length < 2) return; // Need at least 2 points
+    const drawLine = useCallback((points: Point[]) => {
+        // Ensure mapRef is available and valid
+        if (!mapRef.current || points.length < 2) {
+            console.warn("Insufficient points or map not available");
+            return;
+        }
 
         const [start, end] = points;
 
-        // Generate a GeoJSON LineString with a curved path
         const lineGeoJSON = {
             type: 'Feature',
             geometry: {
                 type: 'LineString',
                 coordinates: [
                     [start.longitude, start.latitude], // Start point
-                    [start.longitude + (end.longitude - start.longitude) / 2, start.latitude + (end.latitude - start.latitude) / 2 + 0.0007], // Control point for curve
-                    [end.longitude, end.latitude], // End point
+                    [end.longitude, end.latitude],     // End point
                 ],
             },
         };
-        mapRef.current.on('load', function () {
-            // Add the line layer to the map
-            if (mapRef.current?.getSource('curved-line')) {
-                mapRef.current?.getSource('curved-line').setData(lineGeoJSON);
+
+        const addOrUpdateLine = () => {
+            const lineSource = mapRef.current.getSource('line');
+
+            // Update the existing line data if the source already exists
+            if (lineSource) {
+                const currentData = lineSource._data || {};
+                if (JSON.stringify(currentData.geometry?.coordinates) !== JSON.stringify(lineGeoJSON.geometry.coordinates)) {
+                    lineSource.setData(lineGeoJSON);
+                }
             } else {
-                mapRef.current?.addSource('curved-line', {
+                // Add a new source and layer if it doesn't exist
+                mapRef.current.addSource('line', {
                     type: 'geojson',
                     data: lineGeoJSON,
                 });
-                mapRef.current?.addLayer({
-                    id: 'curved-line',
+
+                mapRef.current.addLayer({
+                    id: 'line',
                     type: 'line',
-                    source: 'curved-line',
+                    source: 'line',
                     layout: {
                         'line-cap': 'round',
                         'line-join': 'round',
@@ -129,12 +129,21 @@ const Map = ({ points }: {
                     paint: {
                         'line-color': '#888',
                         'line-width': 4,
-                        'line-opacity': 0.75
+                        'line-opacity': 0.75,
                     },
                 });
             }
-        })
-    };
+        };
+
+        // Check if the style is loaded
+        if (mapRef.current.isStyleLoaded()) {
+            addOrUpdateLine();
+        } else {
+            // Wait for the style to load and then add/update the line
+            mapRef.current.once('style.load', addOrUpdateLine);
+        }
+    }, []);
+
     return <div ref={mapContainerRef} className="w-full h-full rounded-xl" />;
 };
 

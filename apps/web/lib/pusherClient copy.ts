@@ -6,6 +6,14 @@ export const pusherClient = new PusherClient(
   env.NEXT_PUBLIC_PUSHER_KEY,
   {
     cluster: env.NEXT_PUBLIC_PUSHER_CLUSTER,
+    wsHost: env.NEXT_PUBLIC_PUSHER_URL,
+    wsPort: Number(env.NEXT_PUBLIC_PUSHER_PORT),
+    wssPort: Number(env.NEXT_PUBLIC_PUSHER_PORT),
+    httpHost: env.NEXT_PUBLIC_PUSHER_URL,
+    httpPort: Number(env.NEXT_PUBLIC_PUSHER_PORT),
+    forceTLS: false,
+    disableStats: false,
+    enabledTransports: ['ws', 'wss'],
     userAuthentication: {
       customHandler: ({ socketId }, callback) => {
         rawClient.user.pusherUserAuth.mutate(socketId)
@@ -37,7 +45,6 @@ export const pusherClient = new PusherClient(
   }
 );
 
-pusherClient.signin();
 
 pusherClient.bind("pusher:signin_success", (data: any) => {
   console.log("pusher:signin_success", JSON.parse(data.user_data))

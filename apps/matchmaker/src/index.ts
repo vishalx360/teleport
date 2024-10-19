@@ -1,16 +1,32 @@
 import 'dotenv/config';
 
 import { processBooking } from './processBooking';
-import { consumer } from './kafkaConsumer';
+import { Kafka } from "kafkajs";
+import { env } from './env';
+
+export const kafka = new Kafka({
+    clientId: 'my-app',
+    brokers: [env.KAFKA_URL]
+});
+
+export const consumer = kafka.consumer({ groupId: 'matchmaking-group' });
+
 
 async function startConsumer() {
     await consumer.connect();
-    await consumer.subscribe({ topic: 'BOOKINGS', fromBeginning: true });
+    await consumer.subscribe({
+        topic: 'BOOKINGS',
+        fromBeginning: true
+    });
     await consumer.run({
-        eachMessage: async ({ topic, partition, message }) => {
+        autoCommit: false,
+        eachMessage: async ({ topic, partition, message, }) => {
+            function commitMessage() {
+                consumer.commitOffsets([{ topic, partition, offset: (parseInt(message.offset) + 1).toString() }]);
+            }
             if (message.value) {
                 const bookingData = JSON.parse(message.value.toString());
-                await processBooking(bookingData);
+                await processBooking(bookingData, commitMessage);
             }
         },
     });
