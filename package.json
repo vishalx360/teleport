@@ -12,7 +12,7 @@
     "dev": "turbo run dev",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "generate": "turbo run generate",
-    "start-matchmaker": "turbo run dev --filter=matchmaker",
+    "start-matchmaker": "cd apps/matchmaker && pnpm run start",
     "lint": "turbo run lint"
   },
   "devDependencies": {
