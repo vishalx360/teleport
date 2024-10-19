@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useGeolocated } from "react-geolocated";
+import { toast } from "sonner";
 
 // Helper function to calculate distance between two coordinates in meters
 function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
@@ -10,16 +11,16 @@ function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(toRadians(lat1)) *
-      Math.cos(toRadians(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos(toRadians(lat2)) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const distance = R * c; // Distance in meters
   return distance;
 }
 
 function useActiveLocation({ updateInterval = 60, distanceThreshold = 200 }) {
-  const { coords, getPosition } = useGeolocated({
+  const { coords, getPosition, isGeolocationAvailable, positionError, isGeolocationEnabled } = useGeolocated({
     positionOptions: { enableHighAccuracy: false },
     watchPosition: true,
     userDecisionTimeout: 5000,
@@ -32,6 +33,14 @@ function useActiveLocation({ updateInterval = 60, distanceThreshold = 200 }) {
   const [currentCoords, setCurrentCoords] = useState(null);
 
   useEffect(() => {
+    if (!isGeolocationAvailable) {
+      toast.warning("Location services are not available.")
+      return;
+    };
+    if (!isGeolocationEnabled) {
+      toast.warning("Please enable location services.");
+    }
+
     const intervalId = setInterval(() => {
       console.log("Getting position");
       getPosition();
@@ -73,7 +82,7 @@ function useActiveLocation({ updateInterval = 60, distanceThreshold = 200 }) {
     }
   }, [coords, previousCoords, distanceThreshold]);
 
-  return currentCoords;
+  return { currentCoords, positionError };
 }
 
 export default useActiveLocation;

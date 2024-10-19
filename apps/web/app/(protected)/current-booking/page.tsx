@@ -57,7 +57,7 @@ function useBookingChannel(bookingId: string, updater: () => void) {
 function CurrentBookingPage() {
     const { data: booking, isLoading, error, isRefetching, dataUpdatedAt, refetch } = api.driver.getCurrentBooking.useQuery();
     const [lastUpdated, setLastUpdated] = useState(dataUpdatedAt)
-    const driverLocation = useActiveLocation({
+    const { currentCoords: driverLocation } = useActiveLocation({
         updateInterval: 30,
         distanceThreshold: 200
     });

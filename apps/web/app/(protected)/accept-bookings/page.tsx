@@ -18,53 +18,35 @@ import { Booking } from '@repo/database';
 import { useSession } from 'next-auth/react';
 import { vehicleClassMap, vehicles } from '@/lib/constants';
 import MapView from '../new-booking/MapView';
+import useActiveLocation from '@/hooks/useActiveLocation';
 
 export default function AcceptBookingsPage() {
   const { data: session, status } = useSession();
   const [address, setAddress] = useState("");
+  const { currentCoords, positionError } = useActiveLocation({ updateInterval: 60, distanceThreshold: 200 });
 
-  const { coords, isGeolocationAvailable, positionError, timestamp, isGeolocationEnabled, getPosition } = useGeolocated({
-    positionOptions: { enableHighAccuracy: false },
-    userDecisionTimeout: 5000,
-  });
   const { data: driverAvailability, isLoading: gettingAvailability, refetch: refreshDriverAvailability } = api.driver.getAvailablity.useQuery();
   const { mutateAsync: setAvailablity, isPending: settingAvailablity } = api.driver.setAvailablity.useMutation();
   const { mutateAsync: updateLocation, isPending: updatingLocation } = api.driver.updateLocation.useMutation();
 
   useEffect(() => {
-    handleGeolocation()
-  }, [coords]);
-
-  const handleGeolocation = async () => {
-    if (!isGeolocationAvailable) return toast.warning("Location services are not available.");
-    if (!isGeolocationEnabled) {
-      toast.warning("Please enable location services.");
-      getPosition();
-      return;
-    }
-    if (!coords) return toast.info("Fetching your current location...");
-    try {
-      await updateDriverLocation(coords);
-      const fetchedAddress = await GetAddressFromCoordinates(coords);
-      setAddress(fetchedAddress);
-    } catch (error) {
-      toast.error("Failed to update location or fetch address.");
-      console.error(error);
-    }
-  };
-
-  const updateDriverLocation = async ({ latitude, longitude }) => {
-    try {
-      await updateLocation({ latitude, longitude });
+    if (!currentCoords) return;
+    updateLocation({
+      latitude: currentCoords.latitude,
+      longitude: currentCoords.longitude
+    }).then(() => {
+      GetAddressFromCoordinates({ latitude: currentCoords.latitude, longitude: currentCoords.longitude }).then((address) => {
+        setAddress(address);
+      });
       toast.success("Location updated successfully.");
-    } catch {
-      throw new Error("Failed to update location.");
+    }).catch(() => {
+      toast.error("Failed to update location.");
     }
-  };
+    )
+  }, [currentCoords]);
 
   const handleSetAvailablity = async (checked: boolean) => {
     try {
-      await updateDriverLocation(coords);
       const { available, message } = await setAvailablity({ available: checked });
       await refreshDriverAvailability();
       toast.success(message);
@@ -115,12 +97,9 @@ export default function AcceptBookingsPage() {
               <div className='w-full'>
                 <div className="flex w-full items-center justify-between">
                   <h4 className="font-medium">Current Location: </h4>
-                  <button className="block btn btn-secondary" onClick={() => getPosition()} disabled={updatingLocation}>
-                    <RefreshCcw className={cn("w-5 h-5", updatingLocation && "animate-spin")} />
-                  </button>
                 </div>
                 <p className="text-sm text-gray-600"> {positionError ? `Error: ${positionError.message}` : (address || "Fetching location...")}</p>
-                {timestamp && <p className="text-xs text-gray-500">Updated <TimeAgo date={timestamp} /></p>}
+                {/* {timestamp && <p className="text-xs text-gray-500">Updated <TimeAgo date={timestamp} /></p>} */}
               </div>
             </div>
           </div>

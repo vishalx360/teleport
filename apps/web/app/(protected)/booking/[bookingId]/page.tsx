@@ -103,7 +103,7 @@ function BookingDetailsPage({ params }: {
                             {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
                         </div>
                     ) : (
-                        <div>
+                        <>
                             <div>
                                 <div className="flex flex-row items-center gap-4">
                                     <p className="font-bold text-md">
@@ -216,7 +216,7 @@ function BookingDetailsPage({ params }: {
                                 </Button>
                             </div>
 
-                        </div>
+                        </>
                     )}
                 </CardContent>
             </Card>
