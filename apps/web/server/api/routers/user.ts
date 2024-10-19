@@ -8,7 +8,8 @@ import {
 } from "@/components/validationSchema";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { TRPCError } from "@trpc/server";
-import { type VehicleClass } from "@repo/database";
+import { BookingStatus, type VehicleClass } from "@repo/database";
+import { getDistanceAndDuration } from "@/lib/geoUtils";
 
 export const userRouter = createTRPCRouter({
   testPusher: protectedProcedure.mutation(async ({ ctx, input }) => {
@@ -66,6 +67,7 @@ export const userRouter = createTRPCRouter({
   setRole: protectedProcedure
     .input(userRoleSchema)
     .mutation(async ({ ctx, input }) => {
+      console.log(input);
       const user = await ctx.db.user.findUnique({
         where: {
           id: ctx.session.user.id,
@@ -160,17 +162,41 @@ export const userRouter = createTRPCRouter({
           message: "Booking not found",
         });
       }
-      const returnData = { booking };
+      const returnData = {
+        booking,
+        lastEta: null,
+        lastUpdatedDriverLocation: null,
+      };
       if (booking.driverId) {
         const [lastUpdatedDriverLocation] = await ctx.redis.geopos(
           `DRIVER_LOCATIONS:${booking.vehicleClass}`,
           booking.driverId,
         );
-        console.log(lastUpdatedDriverLocation);
-        returnData.lastUpdatedDriverLocation = {
+        const driverCoordinates = {
           longitude: lastUpdatedDriverLocation[0],
-          latitude: lastUpdatedDriverLocation[1],
-        };
+          latitude: lastUpdatedDriverLocation[1]
+        }
+        returnData.lastUpdatedDriverLocation = driverCoordinates
+
+        const pickupCoordinates = {
+          latitude: booking.pickupAddress.latitude,
+          longitude: booking.pickupAddress.longitude
+        }
+        const deliveryCoordinates = {
+          latitude: booking.deliveryAddress.latitude,
+          longitude: booking.deliveryAddress.longitude
+        }
+        switch (booking?.status) {
+          case BookingStatus.ACCEPTED:
+            const etaToPickup = await getDistanceAndDuration(pickupCoordinates, driverCoordinates);
+            returnData.lastEta = etaToPickup;
+            break;
+          case BookingStatus.PICKED_UP:
+          case BookingStatus.IN_TRANSIT:
+            const etaToDelivery = await getDistanceAndDuration(driverCoordinates, deliveryCoordinates);
+            returnData.lastEta = etaToDelivery
+            break;
+        }
       }
       return returnData;
     }),

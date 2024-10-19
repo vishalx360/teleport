@@ -19,6 +19,7 @@ import { useSession } from 'next-auth/react';
 import { vehicleClassMap, vehicles } from '@/lib/constants';
 import MapView from '../new-booking/MapView';
 import useActiveLocation from '@/hooks/useActiveLocation';
+import { useRouter } from 'next/navigation';
 
 export default function AcceptBookingsPage() {
   const { data: session, status } = useSession();
@@ -163,7 +164,7 @@ function BookingRequestUI({ request, setRequest }: { request: BookingRequest, se
   const [timeLeft, setTimeLeft] = useState<number>(() => calculateTimeLeft(acceptBefore));
   const [progress, setProgress] = useState<number>(100);
   const { mutateAsync: sendBookingResponse, isPending: sendingBookingResponse } = api.driver.bookingResponse.useMutation();
-
+  const router = useRouter();
   useEffect(() => {
     if (timeLeft <= 0) {
       setRequest(null); // Clear request when time runs out
@@ -196,6 +197,7 @@ function BookingRequestUI({ request, setRequest }: { request: BookingRequest, se
       channel,
     }).finally(() => {
       setRequest(null);
+      router.push("/current-booking");
     })
   };
 

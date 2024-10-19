@@ -6,6 +6,7 @@ import {
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { z } from "zod";
 import { BookingStatus } from "@repo/database";
+import { getDistanceAndDuration } from "@/lib/geoUtils";
 
 export const driverRouter = createTRPCRouter({
   setAvailablity: protectedProcedure
@@ -47,6 +48,50 @@ export const driverRouter = createTRPCRouter({
           longitude: input.longitude,
           latitude: input.latitude,
         });
+        const booking = await ctx.db.booking.findUnique({
+          where: { id: input.bookingId },
+          select: {
+            pickupAddress: {
+              select: {
+                latitude: true,
+                longitude: true
+              }
+            },
+            deliveryAddress: {
+              select: {
+                latitude: true,
+                longitude: true
+              },
+            },
+            status: true
+          }
+        });
+        if (!booking) {
+          return { message: "Updated Location successfully" };
+        }
+        const pickupCoordinates = {
+          latitude: booking.pickupAddress.latitude,
+          longitude: booking.pickupAddress.longitude
+        }
+        const deliveryCoordinates = {
+          latitude: booking.deliveryAddress.latitude,
+          longitude: booking.deliveryAddress.longitude
+        }
+        const driverCoordinates = {
+          latitude: input.latitude,
+          longitude: input.longitude
+        }
+        switch (booking?.status) {
+          case BookingStatus.ACCEPTED:
+            const etaToPickup = await getDistanceAndDuration(pickupCoordinates, driverCoordinates);
+            await ctx.pusher.trigger(channelName, "ETA_UPDATE", etaToPickup);
+            break;
+          case BookingStatus.PICKED_UP:
+          case BookingStatus.IN_TRANSIT:
+            const etaToDelivery = await getDistanceAndDuration(driverCoordinates, deliveryCoordinates);
+            await ctx.pusher.trigger(channelName, "ETA_UPDATE", etaToDelivery);
+            break;
+        }
       }
       return { message: "Updated Location successfully" };
     }),
@@ -101,7 +146,9 @@ export const driverRouter = createTRPCRouter({
     const booking = await ctx.db.booking.findFirst({
       where: {
         driverId: ctx.session.user.id,
-        status: BookingStatus.ACCEPTED,
+        status: {
+          in: [BookingStatus.ACCEPTED, BookingStatus.PICKED_UP, BookingStatus.IN_TRANSIT],
+        }
       },
       include: {
         pickupAddress: true,
@@ -110,6 +157,45 @@ export const driverRouter = createTRPCRouter({
       },
     });
 
-    return booking;
+    if (!booking) {
+      return null;
+    }
+    const returnData = {
+      booking,
+      lastEta: null,
+      lastUpdatedDriverLocation: null,
+    };
+
+    const [lastUpdatedDriverLocation] = await ctx.redis.geopos(
+      `DRIVER_LOCATIONS:${booking.vehicleClass}`,
+      booking.driverId,
+    );
+    const driverCoordinates = {
+      longitude: lastUpdatedDriverLocation[0],
+      latitude: lastUpdatedDriverLocation[1]
+    }
+    returnData.lastUpdatedDriverLocation = driverCoordinates
+
+    const pickupCoordinates = {
+      latitude: booking.pickupAddress.latitude,
+      longitude: booking.pickupAddress.longitude
+    }
+    const deliveryCoordinates = {
+      latitude: booking.deliveryAddress.latitude,
+      longitude: booking.deliveryAddress.longitude
+    }
+    switch (booking?.status) {
+      case BookingStatus.ACCEPTED:
+        const etaToPickup = await getDistanceAndDuration(pickupCoordinates, driverCoordinates);
+        returnData.lastEta = etaToPickup;
+        break;
+      case BookingStatus.PICKED_UP:
+      case BookingStatus.IN_TRANSIT:
+        const etaToDelivery = await getDistanceAndDuration(driverCoordinates, deliveryCoordinates);
+        returnData.lastEta = etaToDelivery
+        break;
+    }
+
+    return returnData;
   }),
 });

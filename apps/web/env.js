@@ -31,6 +31,8 @@ export const env = createEnv({
     PUSHER_APP_ID: z.string(),
     PUSHER_SECRET: z.string(),
     KAFKA_URL: z.string().url(),
+    KAFKA_API_KEY: z.string(),
+    KAFKA_API_SECRET: z.string(),
   },
 
   /**
@@ -70,6 +72,8 @@ export const env = createEnv({
     // NEXT_PUBLIC_PUSHER_URL: process.env.NEXT_PUBLIC_PUSHER_URL,
     // NEXT_PUBLIC_PUSHER_PORT: process.env.NEXT_PUBLIC_PUSHER_PORT,
     KAFKA_URL: process.env.KAFKA_URL,
+    KAFKA_API_KEY: process.env.KAFKA_API_KEY,
+    KAFKA_API_SECRET: process.env.KAFKA_API_SECRET,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

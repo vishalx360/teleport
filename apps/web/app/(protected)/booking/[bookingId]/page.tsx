@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { pusherClient } from "@/lib/pusherClient"
 import { cn } from "@/lib/utils"
 import { api } from '@/trpc/react'
-import { BookingStatus } from "@repo/database"
+import { Booking, BookingStatus } from "@repo/database"
 import { ArrowRight, LucideCircleX, MessageSquare, RefreshCw } from "lucide-react"
 import Image from "next/image"
 import { Channel } from "pusher-js"
@@ -40,10 +40,13 @@ function BookingDetailsPage({ params }: {
 }) {
     const { bookingId } = params;
     const { data, isLoading, error, isRefetching, dataUpdatedAt, refetch } = api.user.getBooking.useQuery(bookingId);
-    const { booking, lastUpdatedDriverLocation } = data ?? {}
     const [lastUpdated, setLastUpdated] = useState(dataUpdatedAt)
     const [latestDriverLocation, setLatestDriverLocation] = useState<Coordinates | null>(null)
+    const [latestEta, setLatestEta] = useState<{ distance: number; duration: number } | null>(null)
+
+    const { booking, lastUpdatedDriverLocation, lastEta } = data ?? {}
     const driverLocation = latestDriverLocation ?? lastUpdatedDriverLocation
+    const eta = latestEta ?? lastEta
 
     console.log({
         driverLocation,
@@ -69,6 +72,10 @@ function BookingDetailsPage({ params }: {
                 console.log("Driver Location Updated", data);
                 setLatestDriverLocation(data);
             });
+            bookingChannel.bind("ETA_UPDATE", async (data) => {
+                console.log("ETA Updated", data);
+                setLatestEta(data);
+            });
         }
         return () => {
             if (bookingChannel) {
@@ -81,7 +88,7 @@ function BookingDetailsPage({ params }: {
     if (error) return <p>Error loading booking</p>;
     if (!booking && !isLoading) return <p>Booking not found</p>
 
-    const refreshEta = async () => {
+    const refreshBookingData = async () => {
         await refetch()
         setLastUpdated(0)
     }
@@ -117,7 +124,7 @@ function BookingDetailsPage({ params }: {
                             </div>
 
                             {driverLocation ? (
-                                <div className="relative h-48 w-full rounded-lg overflow-hidden">
+                                <div className="relative h-80 w-full rounded-lg overflow-hidden">
                                     <Map
                                         points={[
                                             {
@@ -188,19 +195,19 @@ function BookingDetailsPage({ params }: {
                             )}
 
                             <div className="flex justify-between items-center">
-                                <div className="flex justify-between gap-4 items-center">
+                                <div className="flex justify-between gap-4 items-start">
                                     <div className="border p-2 border-gray-200 rounded-md">
                                         <img src={vehicleClassMap[booking?.vehicleClass].icon} alt={booking?.vehicleClass} className="h-10 w-10" />
                                     </div>
                                     <div>
-                                        <CurrentStatusText booking={booking} />
-                                        {lastUpdated && <p className="text-sm text-gray-500">Updated {" "}
+                                        <CurrentStatusText eta={eta} booking={booking} />
+                                        {lastUpdated && <p className="mt-2 text-sm text-gray-500">Updated {" "}
                                             <TimeAgo date={new Date(lastUpdated)} />
                                         </p>}
                                     </div>
                                 </div>
                                 <Button
-                                    size="sm" variant={"outline"} onClick={refreshEta}>
+                                    size="sm" variant={"outline"} onClick={refreshBookingData}>
                                     <RefreshCw className={cn("h-4 w-4", isRefetching && "animate-spin")} />
                                 </Button>
                             </div>
@@ -224,7 +231,7 @@ function BookingDetailsPage({ params }: {
     )
 }
 
-function CurrentStatusText({ booking }: { booking: Booking }) {
+function CurrentStatusText({ booking, eta }: { booking: Booking; eta?: { distance: number; duration: number } }) {
     if (booking.status === BookingStatus.BOOKED) {
         return (
 
@@ -239,26 +246,28 @@ function CurrentStatusText({ booking }: { booking: Booking }) {
 
         )
     } else if (booking.status === BookingStatus.ACCEPTED) {
-        // const {dis} = getDistanceAndDuration(booking.pickupAddress, booking.deliveryAddress)
         return (
             <div>
-                <h4 className="">
-                    {booking.driver.name} is on the way.
+                {eta?.duration !== undefined && eta?.duration !== null && <h4 className="text-green-600 font-bold">
+                    Arriving in {eta?.duration} mins
+                </h4>}
+                <h4 className="text-sm">
+                    {booking.driver?.name} is on the way.
                 </h4>
-                <h4 className="">
-                    Arriving in X mins
-                </h4>
+                {eta?.distance && <h4 className="text-sm">
+                    {eta?.distance} km away
+                </h4>}
             </div>
         )
     } else if (booking.status === BookingStatus.ARRIVED) {
         return (
             <div>
                 <h4 className="">
-                    {booking.driver.name} has arrived.
+                    {booking.driver?.name} has arrived.
                 </h4>
-                <h4 className="">
-                    Booked <TimeAgo date={new Date(booking.createdAt)} />
-                </h4>
+                {eta?.distance && <h4 className="text-sm">
+                    {eta?.distance} km away
+                </h4>}
             </div>
         )
     }
@@ -266,10 +275,10 @@ function CurrentStatusText({ booking }: { booking: Booking }) {
         return (
             <div>
                 <h4 className="">
-                    {booking.driver.name} has picked up the package.
+                    {booking.driver?.name} has picked up the package.
                 </h4>
-                <h4 className="">
-                    Booked <TimeAgo date={new Date(booking.createdAt)} />
+                <h4>
+                    {eta?.distance} km left
                 </h4>
             </div>
         )
@@ -277,21 +286,24 @@ function CurrentStatusText({ booking }: { booking: Booking }) {
         return (
             <div>
                 <h4 className="">
-                    {booking.driver.name} is in transit.
+                    {booking.driver?.name} is in transit.
                 </h4>
-                <h4 className="">
-                    Booked <TimeAgo date={new Date(booking.createdAt)} />
-                </h4>
+                {eta?.duration && <h4 className="">
+                    Will be delivered in {eta?.duration} mins
+                </h4>}
+                {eta?.distance && <h4>
+                    {eta?.distance} km left
+                </h4>}
             </div>
         )
     } else if (booking.status === BookingStatus.DELIVERED) {
         return (
             <div>
                 <h4 className="">
-                    Delivered by {booking.driver.name}.
+                    Delivered by {booking.driver?.name}.
                 </h4>
                 <h4 className="">
-                    Booked <TimeAgo date={new Date(booking.createdAt)} />
+                    Delivered just now
                 </h4>
             </div>
         )

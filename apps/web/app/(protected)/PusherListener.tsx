@@ -11,6 +11,8 @@ function PusherListener() {
     const { data: session } = useSession();
 
     useEffect(() => {
+        pusherClient.signin();
+
         let userChannel: Channel | null = null;
         if (session?.user.id) {
             pusherClient.user.bind(`notification`, async (data: UserNotification) => {
