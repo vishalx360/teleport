@@ -36,7 +36,6 @@ export const pusherClient = new PusherClient(env.NEXT_PUBLIC_PUSHER_KEY, {
   },
 });
 
-pusherClient.signin();
 
 pusherClient.bind("pusher:signin_success", (data: any) => {
   console.log("pusher:signin_success", JSON.parse(data.user_data));

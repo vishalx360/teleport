@@ -9,8 +9,10 @@ export const sharedEnvTypes = {
             .default("development"),
         PUSHER_APP_ID: z.string(),
         PUSHER_SECRET: z.string(),
-        ZOOKEEPER_URL: z.string(),
+        ZOOKEEPER_URL: z.string().optional(),
         KAFKA_URL: z.string(),
+        KAFKA_API_KEY: z.string(),
+        KAFKA_API_SECRET: z.string(),
     },
     client: {
         NEXT_PUBLIC_PUSHER_KEY: z.string(),
