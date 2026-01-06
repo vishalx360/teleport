@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/server/auth";
 import SigninAlert from "./SigninAlert";
-import PusherListener from "./PusherListener";
+import NotificationListener from "./NotificationListener";
 
 export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
     const session = await getServerSession(authOptions);
@@ -11,7 +11,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
     }
     return (
         <>
-            <PusherListener />
+            <NotificationListener />
             {children}
         </>
     );

@@ -1,0 +1,39 @@
+# Dependencies
+node_modules
+**/node_modules
+.pnpm-store
+
+# Build outputs
+.next
+out
+dist
+build
+**/dist
+**/build
+
+# Development
+.env
+**/.env
+!.env.example
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Git
+.git
+.gitignore
+
+# Misc
+*.log
+.DS_Store
+Thumbs.db
+
+# Volumes (local docker data)
+volumes
+
+# Test
+coverage
+.nyc_output

@@ -4,11 +4,14 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Package } from "lucide-react"
+import { Package, Truck, User, Bike } from "lucide-react"
 import { signIn } from "next-auth/react"
 import Link from "next/link"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+
+type Role = "USER" | "DRIVER"
+type VehicleClass = "BIKE" | "PICKUP_TRUCK" | "TRUCK"
 
 export default function LoginPage() {
     const router = useRouter()
@@ -16,6 +19,8 @@ export default function LoginPage() {
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
     const [name, setName] = useState("")
+    const [role, setRole] = useState<Role>("USER")
+    const [vehicleClass, setVehicleClass] = useState<VehicleClass>("BIKE")
     const [error, setError] = useState("")
     const [loadingState, setLoadingState] = useState({
         github: false,
@@ -34,7 +39,13 @@ export default function LoginPage() {
                 const response = await fetch("/api/auth/signup", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email, password, name: name || undefined }),
+                    body: JSON.stringify({
+                        email,
+                        password,
+                        name: name || undefined,
+                        role,
+                        vehicleClass: role === "DRIVER" ? vehicleClass : undefined,
+                    }),
                 })
 
                 const data = (await response.json()) as { error?: string }
@@ -104,17 +115,95 @@ export default function LoginPage() {
                         {/* Email/Password Form */}
                         <form onSubmit={handleEmailPasswordSubmit} className="space-y-4">
                             {isSignup && (
-                                <div className="space-y-2">
-                                    <Label htmlFor="name">Name (optional)</Label>
-                                    <Input
-                                        id="name"
-                                        type="text"
-                                        placeholder="Your name"
-                                        value={name}
-                                        onChange={(e) => setName(e.target.value)}
-                                        disabled={loadingState.credentials}
-                                    />
-                                </div>
+                                <>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="name">Name (optional)</Label>
+                                        <Input
+                                            id="name"
+                                            type="text"
+                                            placeholder="Your name"
+                                            value={name}
+                                            onChange={(e) => setName(e.target.value)}
+                                            disabled={loadingState.credentials}
+                                        />
+                                    </div>
+
+                                    {/* Role Selection */}
+                                    <div className="space-y-2">
+                                        <Label>I want to</Label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setRole("USER")}
+                                                disabled={loadingState.credentials}
+                                                className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all ${role === "USER"
+                                                        ? "border-primary bg-primary/5 text-primary"
+                                                        : "border-gray-200 hover:border-gray-300"
+                                                    }`}
+                                            >
+                                                <User className="h-5 w-5" />
+                                                <span className="font-medium">Send packages</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setRole("DRIVER")}
+                                                disabled={loadingState.credentials}
+                                                className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all ${role === "DRIVER"
+                                                        ? "border-primary bg-primary/5 text-primary"
+                                                        : "border-gray-200 hover:border-gray-300"
+                                                    }`}
+                                            >
+                                                <Truck className="h-5 w-5" />
+                                                <span className="font-medium">Be a driver</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Vehicle Class (only for drivers) */}
+                                    {role === "DRIVER" && (
+                                        <div className="space-y-2">
+                                            <Label>Vehicle type</Label>
+                                            <div className="grid grid-cols-3 gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setVehicleClass("BIKE")}
+                                                    disabled={loadingState.credentials}
+                                                    className={`flex flex-col items-center justify-center gap-1 p-3 rounded-lg border-2 transition-all ${vehicleClass === "BIKE"
+                                                            ? "border-primary bg-primary/5 text-primary"
+                                                            : "border-gray-200 hover:border-gray-300"
+                                                        }`}
+                                                >
+                                                    <Bike className="h-5 w-5" />
+                                                    <span className="text-xs font-medium">Bike</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setVehicleClass("PICKUP_TRUCK")}
+                                                    disabled={loadingState.credentials}
+                                                    className={`flex flex-col items-center justify-center gap-1 p-3 rounded-lg border-2 transition-all ${vehicleClass === "PICKUP_TRUCK"
+                                                            ? "border-primary bg-primary/5 text-primary"
+                                                            : "border-gray-200 hover:border-gray-300"
+                                                        }`}
+                                                >
+                                                    <Truck className="h-4 w-4" />
+                                                    <span className="text-xs font-medium">Pickup</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setVehicleClass("TRUCK")}
+                                                    disabled={loadingState.credentials}
+                                                    className={`flex flex-col items-center justify-center gap-1 p-3 rounded-lg border-2 transition-all ${vehicleClass === "TRUCK"
+                                                            ? "border-primary bg-primary/5 text-primary"
+                                                            : "border-gray-200 hover:border-gray-300"
+                                                        }`}
+                                                >
+                                                    <Truck className="h-6 w-6" />
+                                                    <span className="text-xs font-medium">Truck</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
                             )}
                             <div className="space-y-2">
                                 <Label htmlFor="email">Email</Label>

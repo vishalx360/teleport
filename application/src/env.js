@@ -28,11 +28,9 @@ export const env = createEnv({
     GOOGLE_CLIENT_ID: z.string(),
     GOOGLE_CLIENT_SECRET: z.string(),
 
-    PUSHER_APP_ID: z.string(),
-    PUSHER_SECRET: z.string(),
-    KAFKA_URL: z.string().url(),
-    KAFKA_API_KEY: z.string(),
-    KAFKA_API_SECRET: z.string(),
+    // Temporal
+    TEMPORAL_ADDRESS: z.string().default("localhost:7233"),
+    TEMPORAL_NAMESPACE: z.string().default("default"),
   },
 
   /**
@@ -40,10 +38,7 @@ export const env = createEnv({
    * isn't built with invalid env vars. To expose them to the client, prefix them with
    * `NEXT_PUBLIC_`.
    */
-  client: {
-    NEXT_PUBLIC_PUSHER_KEY: z.string(),
-    NEXT_PUBLIC_PUSHER_CLUSTER: z.string(),
-  },
+  client: {},
 
   /**
    * You can't destruct `process.env` as a regular object in the Next.js edge runtimes (e.g.
@@ -59,13 +54,8 @@ export const env = createEnv({
     GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET,
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
-    NEXT_PUBLIC_PUSHER_KEY: process.env.NEXT_PUBLIC_PUSHER_KEY,
-    NEXT_PUBLIC_PUSHER_CLUSTER: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
-    PUSHER_APP_ID: process.env.PUSHER_APP_ID,
-    PUSHER_SECRET: process.env.PUSHER_SECRET,
-    KAFKA_URL: process.env.KAFKA_URL,
-    KAFKA_API_KEY: process.env.KAFKA_API_KEY,
-    KAFKA_API_SECRET: process.env.KAFKA_API_SECRET,
+    TEMPORAL_ADDRESS: process.env.TEMPORAL_ADDRESS,
+    TEMPORAL_NAMESPACE: process.env.TEMPORAL_NAMESPACE,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

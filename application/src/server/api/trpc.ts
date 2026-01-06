@@ -13,26 +13,31 @@ import { ZodError } from "zod";
 
 import { getServerAuthSession } from "@/server/auth";
 
-import { produceMessage } from "@/lib/produceMessage";
 import { db } from "@/lib/db";
 import { redisClient } from "@/lib/redisClient";
-import { pusherServer } from "@/lib/pusherServer";
+import { getTemporalClient } from "@/lib/temporalClient";
 
 export type UserNotification = {
   message: string;
   type: "success" | "error";
 };
 
-// notify message to the client
-async function notify({
+// Publish notification via Redis PubSub for SSE delivery
+async function publishNotification({
   channel,
-  notification,
+  event,
+  data,
 }: {
   channel: string;
-  notification: UserNotification;
+  event: string;
+  data: unknown;
 }) {
-  return await pusherServer.trigger(channel, "notification", notification);
+  return await redisClient.publish(
+    channel,
+    JSON.stringify({ event, data, timestamp: Date.now() })
+  );
 }
+
 /**
  * 1. CONTEXT
  *
@@ -51,9 +56,8 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
   return {
     db,
     redis: redisClient,
-    pusher: pusherServer,
-    produceMessage,
-    notify,
+    getTemporalClient,
+    publishNotification,
     session,
     ...opts,
   };

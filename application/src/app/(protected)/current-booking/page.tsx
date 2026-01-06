@@ -4,22 +4,17 @@ import BackButton from "@/components/BackButton"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { pusherClient } from "@/lib/pusherClient"
 import { cn } from "@/lib/utils"
 import { api } from '@/trpc/react'
 import { Booking, BookingStatus } from "@prisma/client"
 import { ArrowRight, LucideCheck, LucideCircleX, MessageSquare, RefreshCw } from "lucide-react"
-import Image from "next/image"
-import { Channel } from "pusher-js"
 import { useEffect, useState } from 'react'
 import TimeAgo from 'react-timeago'
 import { toast } from "sonner"
-import { formattedStatus, vehicleClassMap, vehicles } from "@/lib/constants"
-import MapView, { Coordinates } from "../new-booking/MapView"
-import { useGeolocated } from "react-geolocated"
+import { formattedStatus, vehicleClassMap } from "@/lib/constants"
 import Map from "../new-booking/Map"
 import useActiveLocation from "@/hooks/useActiveLocation"
-import { getDistanceAndDuration } from "@/lib/geoUtils"
+import { getDistanceFromLatLonInMeters } from "@/lib/geoUtils"
 
 
 function CurrentBookingPage() {
@@ -27,7 +22,9 @@ function CurrentBookingPage() {
     const [lastUpdated, setLastUpdated] = useState(dataUpdatedAt)
 
     const { mutateAsync: updateLocation, isPending: updatingLocation } = api.driver.updateLocation.useMutation();
+    const { mutateAsync: updateBookingStatus } = api.driver.updateBookingStatus.useMutation();
     const [latestEta, setLatestEta] = useState<{ distance: number; duration: number } | null>(null)
+    const [lastSentLocation, setLastSentLocation] = useState<{ latitude: number; longitude: number } | null>(null)
 
     const { booking, lastUpdatedDriverLocation, lastEta } = data ?? {}
     const eta = latestEta ?? lastEta
@@ -39,47 +36,88 @@ function CurrentBookingPage() {
 
     const driverLocation = latestDriverLocation ?? lastUpdatedDriverLocation
 
-
-
+    // Subscribe to booking updates via SSE
+    api.subscriptions.onBookingUpdate.useSubscription(
+        { bookingId: booking?.id ?? '' },
+        {
+            enabled: !!booking?.id,
+            onData: (event) => {
+                console.log('Booking update received:', event);
+                switch (event.event) {
+                    case 'ETA_UPDATE':
+                        setLatestEta(event.data as { distance: number; duration: number });
+                        break;
+                    case 'STATUS_UPDATE':
+                        refetch();
+                        if (event.data && typeof event.data === 'object' && 'message' in event.data) {
+                            toast.success(event.data.message as string);
+                        }
+                        break;
+                    default:
+                        refetch();
+                }
+            },
+            onError: (error) => {
+                console.error('Subscription error:', error);
+            },
+        }
+    );
 
     useEffect(() => {
-        let bookingChannel: Channel | null = null;
-        const channelName = `private-booking-${booking?.id}`;
-
-        if (booking?.id) {
-            console.log("Subscribing to channel", channelName);
-            bookingChannel = pusherClient.subscribe(channelName);
-            bookingChannel.bind("UPDATE", async (data) => {
-                await refetch();
-                toast.success(data.message);
+        if (!driverLocation?.latitude || !driverLocation?.longitude || !booking?.id) return;
+        
+        // If we haven't sent a location yet, send it immediately
+        if (!lastSentLocation) {
+            updateLocation({
+                latitude: driverLocation.latitude,
+                longitude: driverLocation.longitude,
+                bookingId: booking.id
+            }).then(() => {
+                setLastSentLocation({
+                    latitude: driverLocation.latitude,
+                    longitude: driverLocation.longitude
+                });
+            }).catch((error) => {
+                console.error('Failed to update location:', error);
             });
-            bookingChannel.bind("ETA_UPDATE", async (data) => {
-                console.log("ETA Updated", data);
-                setLatestEta(data);
+            return;
+        }
+
+        // Calculate distance between last sent location and current location
+        const distanceInMeters = getDistanceFromLatLonInMeters(
+            lastSentLocation.latitude,
+            lastSentLocation.longitude,
+            driverLocation.latitude,
+            driverLocation.longitude
+        );
+
+        // Only send update if distance is more than 400 meters
+        if (distanceInMeters > 400) {
+            updateLocation({
+                latitude: driverLocation.latitude,
+                longitude: driverLocation.longitude,
+                bookingId: booking.id
+            }).then(() => {
+                setLastSentLocation({
+                    latitude: driverLocation.latitude,
+                    longitude: driverLocation.longitude
+                });
+            }).catch((error) => {
+                console.error('Failed to update location:', error);
             });
         }
-        return () => {
-            if (bookingChannel) {
-                bookingChannel.unbind_all();
-                pusherClient.unsubscribe(channelName);
-            }
-        };
-    }, [booking]);
-
-
-    useEffect(() => {
-        if (!driverLocation?.latitude || !driverLocation?.longitude) return;
-        updateLocation({
-            latitude: driverLocation.latitude,
-            longitude: driverLocation.longitude,
-            bookingId: booking?.id
-        });
-
-    }, [driverLocation, booking]);
+    }, [driverLocation, booking, lastSentLocation]);
 
     useEffect(() => {
         setLastUpdated(dataUpdatedAt)
     }, [dataUpdatedAt])
+
+    // Reset last sent location when booking changes
+    useEffect(() => {
+        if (booking?.id) {
+            setLastSentLocation(null);
+        }
+    }, [booking?.id])
 
     if (error) return <p>Error loading booking</p>;
     if (!booking && !isLoading) return <p>Booking not found</p>
@@ -88,6 +126,17 @@ function CurrentBookingPage() {
         await refetch()
         setLastUpdated(0)
     }
+
+    const handleStatusUpdate = async (status: "ARRIVED" | "PICKED_UP" | "IN_TRANSIT" | "DELIVERED") => {
+        if (!booking?.id) return;
+        try {
+            await updateBookingStatus({ bookingId: booking.id, status });
+            await refetch();
+            toast.success(`Status updated to ${status}`);
+        } catch (error) {
+            toast.error('Failed to update status');
+        }
+    };
 
     return (
         <div className="min-h-screen bg-gray-100 p-4">
@@ -210,23 +259,50 @@ function CurrentBookingPage() {
 
                             <div className="flex flex-col gap-4">
                                 {booking?.status === BookingStatus.ACCEPTED
-                                    && eta?.distance && Number(eta?.distance) < 0.2 && <Button className="bg-green-600 text-white hover:text-white hover:bg-green-700 transition-colors flex-1" variant="outline">
+                                    && eta?.distance && Number(eta?.distance) < 0.2 && (
+                                    <Button 
+                                        className="bg-green-600 text-white hover:text-white hover:bg-green-700 transition-colors flex-1" 
+                                        variant="outline"
+                                        onClick={() => handleStatusUpdate("ARRIVED")}
+                                    >
                                         <LucideCheck className="h-4 w-4 mr-2" />
                                         I have arrived
-                                    </Button>}
-                                {booking?.status === BookingStatus.ARRIVED && eta?.distance && Number(eta?.distance) < 0.2 && <Button className="bg-green-600 text-white hover:text-white hover:bg-green-700 transition-colors flex-1" variant="outline">
-                                    <LucideCheck className="h-4 w-4 mr-2" />
-                                    Mark as Picked Up
-                                </Button>}
-                                {booking?.status === BookingStatus.IN_TRANSIT && eta?.distance && Number(eta?.distance) < 0.2 && <Button className="bg-green-600 text-white hover:text-white hover:bg-green-700 transition-colors flex-1" variant="outline">
-                                    <LucideCheck className="h-4 w-4 mr-2" />
-                                    Mark as Delivered
-                                </Button>}
+                                    </Button>
+                                )}
+                                {booking?.status === BookingStatus.ARRIVED && (
+                                    <Button 
+                                        className="bg-green-600 text-white hover:text-white hover:bg-green-700 transition-colors flex-1" 
+                                        variant="outline"
+                                        onClick={() => handleStatusUpdate("PICKED_UP")}
+                                    >
+                                        <LucideCheck className="h-4 w-4 mr-2" />
+                                        Mark as Picked Up
+                                    </Button>
+                                )}
+                                {booking?.status === BookingStatus.PICKED_UP && (
+                                    <Button 
+                                        className="bg-blue-600 text-white hover:text-white hover:bg-blue-700 transition-colors flex-1" 
+                                        variant="outline"
+                                        onClick={() => handleStatusUpdate("IN_TRANSIT")}
+                                    >
+                                        <LucideCheck className="h-4 w-4 mr-2" />
+                                        Start Delivery
+                                    </Button>
+                                )}
+                                {booking?.status === BookingStatus.IN_TRANSIT && eta?.distance && Number(eta?.distance) < 0.2 && (
+                                    <Button 
+                                        className="bg-green-600 text-white hover:text-white hover:bg-green-700 transition-colors flex-1" 
+                                        variant="outline"
+                                        onClick={() => handleStatusUpdate("DELIVERED")}
+                                    >
+                                        <LucideCheck className="h-4 w-4 mr-2" />
+                                        Mark as Delivered
+                                    </Button>
+                                )}
                             </div>
 
                             <div className="flex flex-row gap-4">
-
-                                {booking?.driverId && <Button className="flex-1" variant="outline">
+                                {booking?.userId && <Button className="flex-1" variant="outline">
                                     <MessageSquare className="h-4 w-4 mr-2" />
                                     Message User
                                 </Button>}
@@ -244,7 +320,7 @@ function CurrentBookingPage() {
     )
 }
 
-function CurrentStatusText({ booking, eta }: { booking: Booking, eta?: { distance: string, duration: string } }) {
+function CurrentStatusText({ booking, eta }: { booking: Booking, eta?: { distance: number, duration: number } | null }) {
     if (booking.status === BookingStatus.BOOKED) {
         return (
             <div>
@@ -274,7 +350,7 @@ function CurrentStatusText({ booking, eta }: { booking: Booking, eta?: { distanc
         return (
             <div>
                 <h4 className="">
-                    You have has arrived at the pickup location.
+                    You have arrived at the pickup location.
                 </h4>
                 {eta?.distance && <h4 className="text-sm">
                     {eta?.distance} km away
@@ -286,7 +362,7 @@ function CurrentStatusText({ booking, eta }: { booking: Booking, eta?: { distanc
         return (
             <div>
                 <h4 className="">
-                    You has picked up the package.
+                    You have picked up the package.
                 </h4>
                 <h4>
                     {eta?.distance} km left

@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useGeolocated } from 'react-geolocated';
 import TimeAgo from 'react-timeago';
 import { toast } from 'sonner';
 import BackButton from "@/components/BackButton";
@@ -10,13 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import { GetAddressFromCoordinates } from "@/lib/geoUtils";
+import { GetAddressFromCoordinates, getDistanceFromLatLonInMeters } from "@/lib/geoUtils";
 import { api } from "@/trpc/react";
-import { LucideInfo, MapPin, MapPinCheck, MapPinned, RadarIcon, RefreshCcw } from 'lucide-react';
-import { pusherClient } from '@/lib/pusherClient';
+import { LucideInfo, MapPin, MapPinned } from 'lucide-react';
 import { Booking } from '@prisma/client';
 import { useSession } from 'next-auth/react';
-import { vehicleClassMap, vehicles } from '@/lib/constants';
+import { vehicleClassMap } from '@/lib/constants';
 import MapView from '../new-booking/MapView';
 import useActiveLocation from '@/hooks/useActiveLocation';
 import { useRouter } from 'next/navigation';
@@ -24,6 +22,7 @@ import { useRouter } from 'next/navigation';
 export default function AcceptBookingsPage() {
   const { data: session, status } = useSession();
   const [address, setAddress] = useState("");
+  const [lastSentLocation, setLastSentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const { currentCoords, positionError } = useActiveLocation({ updateInterval: 60, distanceThreshold: 200 });
 
   const { data: driverAvailability, isLoading: gettingAvailability, refetch: refreshDriverAvailability } = api.driver.getAvailablity.useQuery();
@@ -32,19 +31,54 @@ export default function AcceptBookingsPage() {
 
   useEffect(() => {
     if (!currentCoords) return;
-    updateLocation({
-      latitude: currentCoords.latitude,
-      longitude: currentCoords.longitude
-    }).then(() => {
-      GetAddressFromCoordinates({ latitude: currentCoords.latitude, longitude: currentCoords.longitude }).then((address) => {
-        setAddress(address);
+    
+    // If we haven't sent a location yet, send it immediately
+    if (!lastSentLocation) {
+      updateLocation({
+        latitude: currentCoords.latitude,
+        longitude: currentCoords.longitude
+      }).then(() => {
+        setLastSentLocation({
+          latitude: currentCoords.latitude,
+          longitude: currentCoords.longitude
+        });
+        GetAddressFromCoordinates({ latitude: currentCoords.latitude, longitude: currentCoords.longitude }).then((address) => {
+          setAddress(address);
+        });
+        toast.success("Location updated successfully.");
+      }).catch(() => {
+        toast.error("Failed to update location.");
       });
-      toast.success("Location updated successfully.");
-    }).catch(() => {
-      toast.error("Failed to update location.");
+      return;
     }
-    )
-  }, [currentCoords]);
+
+    // Calculate distance between last sent location and current location
+    const distanceInMeters = getDistanceFromLatLonInMeters(
+      lastSentLocation.latitude,
+      lastSentLocation.longitude,
+      currentCoords.latitude,
+      currentCoords.longitude
+    );
+
+    // Only send update if distance is more than 400 meters
+    if (distanceInMeters > 400) {
+      updateLocation({
+        latitude: currentCoords.latitude,
+        longitude: currentCoords.longitude
+      }).then(() => {
+        setLastSentLocation({
+          latitude: currentCoords.latitude,
+          longitude: currentCoords.longitude
+        });
+        GetAddressFromCoordinates({ latitude: currentCoords.latitude, longitude: currentCoords.longitude }).then((address) => {
+          setAddress(address);
+        });
+        toast.success("Location updated successfully.");
+      }).catch(() => {
+        toast.error("Failed to update location.");
+      });
+    }
+  }, [currentCoords, lastSentLocation]);
 
   const handleSetAvailablity = async (checked: boolean) => {
     try {
@@ -100,7 +134,6 @@ export default function AcceptBookingsPage() {
                   <h4 className="font-medium">Current Location: </h4>
                 </div>
                 <p className="text-sm text-gray-600"> {positionError ? `Error: ${positionError.message}` : (address || "Fetching location...")}</p>
-                {/* {timestamp && <p className="text-xs text-gray-500">Updated <TimeAgo date={timestamp} /></p>} */}
               </div>
             </div>
           </div>
@@ -116,28 +149,53 @@ export default function AcceptBookingsPage() {
 }
 
 type BookingRequest = {
-  booking: Booking;
-  acceptBefore: Date;
-  channel: string;
+  booking: {
+    id: string;
+    userId: string;
+    vehicleClass: string;
+    pickupAddress: {
+      id: string;
+      nickname: string;
+      address: string;
+      contactName: string;
+      mobile: string;
+      latitude: number;
+      longitude: number;
+    };
+    deliveryAddress: {
+      id: string;
+      nickname: string;
+      address: string;
+      contactName: string;
+      mobile: string;
+      latitude: number;
+      longitude: number;
+    };
+    price: number;
+    distance: number;
+    duration: number;
+  };
+  acceptBefore: string;
 };
 
 function FindingBookings() {
   const [bookingRequest, setBookingRequest] = useState<BookingRequest | null>(null);
 
-  useEffect(() => {
-    pusherClient.user.bind('driver-booking-request', (data: BookingRequest) => {
-      console.log({ data })
-      setBookingRequest({
-        ...data,
-        acceptBefore: new Date(data.acceptBefore),
-      });
-
-    });
-
-    return () => {
-      pusherClient.user.unbind('driver-booking-request');
-    };
-  }, []);
+  // Subscribe to booking requests via SSE
+  api.subscriptions.onBookingRequest.useSubscription(undefined, {
+    onData: (data) => {
+      console.log('Received booking request:', data);
+      if (data.event === 'BOOKING_REQUEST') {
+        setBookingRequest({
+          booking: data.data.booking,
+          acceptBefore: data.data.acceptBefore,
+        });
+      }
+    },
+    onError: (error) => {
+      console.error('Subscription error:', error);
+    },
+  });
 
   if (bookingRequest) {
     return <BookingRequestUI
@@ -160,45 +218,50 @@ function FindingBookings() {
 }
 
 function BookingRequestUI({ request, setRequest }: { request: BookingRequest, setRequest: (request: BookingRequest | null) => void }) {
-  const { booking, acceptBefore, channel } = request;
-  const [timeLeft, setTimeLeft] = useState<number>(() => calculateTimeLeft(acceptBefore));
+  const { booking, acceptBefore } = request;
+  const acceptBeforeDate = new Date(acceptBefore);
+  const [timeLeft, setTimeLeft] = useState<number>(() => calculateTimeLeft(acceptBeforeDate));
   const [progress, setProgress] = useState<number>(100);
   const { mutateAsync: sendBookingResponse, isPending: sendingBookingResponse } = api.driver.bookingResponse.useMutation();
   const router = useRouter();
+
   useEffect(() => {
     if (timeLeft <= 0) {
-      setRequest(null); // Clear request when time runs out
+      setRequest(null);
       return;
     }
 
     const intervalId = setInterval(() => {
-      const remainingTime = calculateTimeLeft(acceptBefore);
+      const remainingTime = calculateTimeLeft(acceptBeforeDate);
       setTimeLeft(remainingTime);
 
-      // Calculate progress percentage
-      const totalTime = acceptBefore.getTime() - new Date().getTime();
+      const totalTime = acceptBeforeDate.getTime() - new Date().getTime();
       const percentage = (remainingTime / totalTime) * 100;
       setProgress(Math.max(percentage, 0));
 
-      // Auto-clear the request when time expires
       if (remainingTime <= 0) {
         clearInterval(intervalId);
-        setRequest(null); // Clear the request after timeout
+        setRequest(null);
       }
-    }, 1000); // Update every second
+    }, 1000);
 
-    return () => clearInterval(intervalId); // Cleanup on unmount
+    return () => clearInterval(intervalId);
   }, [acceptBefore, timeLeft]);
 
   const handleResponse = (accepted: boolean) => {
     sendBookingResponse({
       bookingId: booking.id,
       accepted,
-      channel,
-    }).finally(() => {
-      setRequest(null);
-      router.push("/current-booking");
-    })
+    }).then(() => {
+      if (accepted) {
+        router.push(`/booking/${booking.id}`);
+      } else {
+        setRequest(null);
+      }
+    }).catch((error) => {
+      console.error('Failed to send response:', error);
+      toast.error('Failed to send response');
+    });
   };
 
 
@@ -236,20 +299,30 @@ function BookingRequestUI({ request, setRequest }: { request: BookingRequest, se
 
       {/* Accept/Reject buttons */}
       <div className="flex gap-4">
-        <button className="btn btn-primary" onClick={() => { handleResponse(true) }}>Accept Booking</button>
-        <button className="btn btn-secondary" onClick={() => { handleResponse(true) }}>Reject</button>
+        <button 
+          className="btn btn-primary" 
+          onClick={() => handleResponse(true)}
+          disabled={sendingBookingResponse}
+        >
+          Accept Booking
+        </button>
+        <button 
+          className="btn btn-secondary" 
+          onClick={() => handleResponse(false)}
+          disabled={sendingBookingResponse}
+        >
+          Reject
+        </button>
       </div>
     </div>
   );
 }
 
-// Helper function to calculate time left in milliseconds
 function calculateTimeLeft(acceptBefore: Date): number {
   const now = new Date().getTime();
   return acceptBefore.getTime() - now;
 }
 
-// Simple progress bar component
 function ProgressBar({ progress }: { progress: number }) {
   return (
     <div className="w-full bg-gray-200 rounded h-2.5">
@@ -260,32 +333,3 @@ function ProgressBar({ progress }: { progress: number }) {
     </div>
   );
 }
-
-
-// const { latitude, longitude } = position.coords;
-
-//           // Check if coordinates have changed more than 200 meters
-//           if (previousCoords.latitude !== null && previousCoords.longitude !== null) {
-//             const distance = getDistanceFromLatLonInMeters(
-//               previousCoords.latitude,
-//               previousCoords.longitude,
-//               latitude,
-//               longitude
-//             );
-
-//             if (distance <= 200) {
-//               console.log("Coordinates have not changed by more than 200 meters. Skipping API call.");
-//               return;
-//             }
-//             address = GetAddressFromCoordinates({ latitude, longitude })
-//           }
-
-//  // remove this
-//  setCurrentLocation({
-//   address: "BTM Layout, Bengaluru, Bengaluru Urban, Karnataka, India",
-//   latitude: 12.912389,
-//   longitude: 77.593148
-// });
-// setLastUpdated(new Date());
-// return
-// // remove this

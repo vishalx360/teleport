@@ -1,108 +1,221 @@
 # Teleport
 
+A resilient package delivery platform connecting users with drivers for real-time transportation services.
+
 ![Teleport Arch](Arch.png "TeleportArch")
+
+## Quick Start with Docker
+
+Start the entire application with a single command:
+
+```bash
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop all services
+docker-compose down
+```
+
+### Services Started
+
+| Service | Port | Description |
+|---------|------|-------------|
+| Application | 3000 | Next.js frontend & API |
+| Temporal UI | 8080 | Workflow monitoring dashboard |
+| Temporal | 7233 | Temporal server (internal) |
+| PostgreSQL | 5432 | Primary database |
+| Redis | 6379 | Geolocation & caching |
+
+### Access Points
+- **Application**: http://localhost:3000
+- **Temporal UI**: http://localhost:8080
+
+## Environment Variables
+
+Create a `.env` file in the root directory (for docker-compose):
+
+```env
+# OAuth Providers (required for authentication)
+GITHUB_CLIENT_ID=your-github-client-id
+GITHUB_CLIENT_SECRET=your-github-client-secret
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+```
+
+## Local Development
+
+### Prerequisites
+- Node.js 20+
+- pnpm 9+
+- Docker & Docker Compose
+
+### Setup
+
+```bash
+# Start infrastructure only
+docker-compose up -d redis postgres temporal temporal-ui
+
+# Install dependencies
+cd application && pnpm install
+cd ../matchmaker && pnpm install
+
+# Generate Prisma client (from application folder)
+cd application && pnpm prisma generate
+
+# Run database migrations
+pnpm prisma db push
+
+# Start application (terminal 1)
+pnpm dev
+
+# Start matchmaker worker (terminal 2)
+cd ../matchmaker && pnpm dev
+```
+
+---
+
+## Architecture
+
+### Technology Stack
+
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| Frontend | Next.js 14 | React UI with SSR |
+| API | tRPC | Type-safe API with SSE subscriptions |
+| Database | PostgreSQL | Primary data storage |
+| Cache | Redis | Geolocation (GEORADIUS) & PubSub |
+| Workflow | Temporal | Durable matchmaking orchestration |
+| Real-time | tRPC SSE | Server-Sent Events for live updates |
+
+### System Components
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        Frontend (Next.js)                       │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
+│  │   User UI   │  │  Driver UI  │  │  SSE Subscriptions      │ │
+│  └──────┬──────┘  └──────┬──────┘  └───────────┬─────────────┘ │
+└─────────┼────────────────┼─────────────────────┼───────────────┘
+          │                │                     │
+          ▼                ▼                     ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      tRPC API Layer                             │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐ │
+│  │  Mutations  │  │   Queries   │  │  Subscriptions (SSE)    │ │
+│  └──────┬──────┘  └──────┬──────┘  └───────────┬─────────────┘ │
+└─────────┼────────────────┼─────────────────────┼───────────────┘
+          │                │                     │
+          ▼                ▼                     ▼
+┌─────────────────┐ ┌─────────────┐ ┌─────────────────────────────┐
+│    Temporal     │ │  PostgreSQL │ │          Redis              │
+│  ┌───────────┐  │ │             │ │  ┌─────────┐  ┌──────────┐  │
+│  │ Workflow  │  │ │  Bookings   │ │  │  Geo    │  │  PubSub  │  │
+│  │ Signals   │  │ │  Users      │ │  │ RADIUS  │  │  Events  │  │
+│  └─────┬─────┘  │ │  Addresses  │ │  └─────────┘  └──────────┘  │
+└────────┼────────┘ └─────────────┘ └─────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   Matchmaker Worker (Temporal)                  │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │              matchmakingWorkflow                         │   │
+│  │  1. Find nearby drivers (Redis GEORADIUS)               │   │
+│  │  2. Lock driver → Send request → Wait for signal        │   │
+│  │  3. On accept: Update DB → Notify user                  │   │
+│  │  4. On reject/timeout: Try next driver                  │   │
+│  └─────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
 
 ## Application Flow
 
-### User Initiation
+### 1. User Initiation
+- User accesses the platform, inputs pickup/drop-off addresses, selects vehicle type, and confirms booking.
 
-- The user accesses the Teleport platform via the Next.js server, inputs their pickup and drop-off addresses, selects a vehicle type, and completes the payment.
+### 2. Booking Created → Temporal Workflow Started
+- Booking saved to PostgreSQL with status `BOOKED`
+- Temporal `matchmakingWorkflow` started with booking details
 
-### Booking Status - BOOKED
+### 3. Driver Matchmaking (Temporal Workflow)
+- Workflow queries Redis GEORADIUS for nearby available drivers
+- For each driver (closest first):
+  - Lock driver temporarily
+  - Publish booking request via Redis PubSub → SSE → Driver app
+  - Wait for Temporal signal (accept/reject) or timeout (20s)
+  - If accepted: workflow completes successfully
+  - If rejected/timeout: try next driver
 
-- Upon successful payment, the booking enters a BOOKED state. The Next.js server initiates a matchmaking request with the Matchmaking Service to assign a driver.
+### 4. Driver Acceptance → Status ACCEPTED
+- Temporal workflow updates booking status to `ACCEPTED`
+- User receives real-time notification via SSE subscription
+- Driver and user interfaces update with trip details
 
-### Driver Matchmaking
-
-- The Matchmaking Service identifies available drivers by subscribing to Kafka topics for real-time driver status.
-  - It sends a booking request to drivers one-by-one.
-  - Each driver has a 10-second window to accept or decline. If declined or ignored, the request moves to the next available driver.
-
-### Driver Acceptance and Booking Status - ACCEPTED
-
-- If a driver accepts, the matchmaking process stops for that booking, and the booking status changes to ACCEPTED.
-- Real-time notifications are sent to the user through the Sokti Server (WebSocket), updating the booking status and providing the driver’s details and live location.
-
-### Driver and User Interface Updates
-
-- **User Interface**: The user’s view refreshes to display the driver’s information, live location, distance, and ETA.
-- **Driver Interface**: The driver’s screen updates to show pickup details, distance, and ETA for the pickup location.
-
-### Driver Arrival at Pickup Location
-
-- When the driver is within 200 meters of the pickup location, a “Ready to Pick Up” button becomes active on their interface.
-
-### Package Pickup Confirmation
-
-- The user hands the package to the driver, shares an OTP for verification, and the driver confirms the pickup.
-- The booking status changes to PICKEDUP, and the user can now track the package in real-time until delivery.
-
-### Driver Arrival at Drop-off Location
-
-- Upon reaching within 200 meters of the drop-off address, the driver can contact the recipient via the phone number provided in the delivery details to request an OTP for delivery completion.
-
-### Delivery Confirmation and Booking Status - DELIVERED
-
-- The driver enters the OTP and marks the package as delivered.
-- The booking status updates to DELIVERED, completing the transport.
+### 5. Trip Lifecycle
+| Status | Trigger | Description |
+|--------|---------|-------------|
+| `BOOKED` | User creates booking | Searching for driver |
+| `ACCEPTED` | Driver accepts | Driver assigned |
+| `ARRIVED` | Driver at pickup | Ready for pickup |
+| `PICKED_UP` | Package collected | OTP verified |
+| `IN_TRANSIT` | En route | Live tracking |
+| `DELIVERED` | Package delivered | Trip completed |
 
 ---
 
-## Technical Architecture
+## Key Benefits of Temporal Architecture
 
-The Teleport application is designed to facilitate the transportation of items by connecting users with a fleet of drivers. To achieve high availability, performance, and real-time interactions, the architecture is built around a microservices pattern, utilizing several technologies to ensure smooth operations.
-
-### 1. Next.js Server
-
-- **Role**: The Next.js server serves as the frontend of the application, responsible for delivering static assets and rendering React components. It also includes backend functionality through serverless APIs built using TRPC (TypeScript Remote Procedure Call).
-- **Interaction**:
-  - Communicates with the Matchmaking Service to request driver availability and transport options.
-  - Retrieves data from the PostgreSQL database for user profiles and historical data.
-  - Utilizes Redis for caching frequently accessed data, improving response times.
-  - Integrates with the Sokti server to provide real-time updates to users through WebSockets.
-
-### 2. Matchmaking Service (Node.js Service)
-
-- **Role**: This service is responsible for the core logic of matching users with available drivers. It listens for specific events and processes matchmaking based on user requests and driver availability.
-- **Interaction**:
-  - Subscribes to Kafka topics to receive notifications about driver availability and status changes.
-  - Sends matchmaking results back to the Next.js server, updating users with the assigned drivers.
-  - Interacts with PostgreSQL to store and retrieve information regarding user requests and driver details.
-
-### 3. Kafka (Message Queue)
-
-- **Role**: Kafka acts as a message broker that enables asynchronous communication between services. It handles events and notifications, ensuring that the system can manage high traffic efficiently.
-- **Interaction**:
-  - Connects the Matchmaking Service to the driver services, publishing and subscribing to topics related to driver availability, user requests, and status updates.
-  - Facilitates communication between the Next.js server and other backend services, allowing for decoupled service interactions.
-
-### 4. Sokti Server (Pusher Server for WebSocket Events)
-
-- **Role**: The Sokti server provides real-time capabilities to the application through WebSockets. It allows for instant updates to users regarding driver status, tracking, and other relevant information.
-- **Interaction**:
-  - Receives events from the Matchmaking Service regarding driver assignments and status changes, pushing these updates to the Next.js server.
-  - Sends WebSocket events to the frontend to ensure users receive real-time notifications about their transport requests.
-
-### 5. PostgreSQL (Primary Database)
-
-- **Role**: PostgreSQL serves as the primary relational database for storing user profiles, driver information, ride history, and other essential data.
-- **Interaction**:
-  - Interacts with both the Next.js server and Matchmaking Service to retrieve and store data as needed.
-  - Ensures data integrity and supports complex queries for reporting and analytics.
-
-### 6. Redis (Primary Cache)
-
-- **Role**: Redis is utilized as a caching layer to improve the performance of the application by storing frequently accessed data in memory.
-- **Interaction**:
-  - Caches user sessions, driver statuses, and other temporary data to reduce latency and database load.
-  - Works closely with the Next.js server to provide quick access to data and enhance user experience.
+1. **Durability**: Workflows survive crashes, restarts, and deployments
+2. **Visibility**: Full workflow history in Temporal UI
+3. **Retries**: Built-in retry logic for transient failures
+4. **Timeouts**: Native support for driver response timeouts
+5. **Signals**: Clean mechanism for driver accept/reject responses
 
 ---
 
-## Overall Flow
+## Project Structure
 
-1. **User Interaction**: Users access the frontend through the Next.js server, initiating transport requests.
-2. **Matchmaking**: The Next.js server communicates with the Matchmaking Service to find available drivers. The Matchmaking Service listens to Kafka topics for real-time driver status updates.
-3. **Real-Time Updates**: Once a driver is matched, the Sokti server pushes real-time notifications to the frontend, updating users about their driver’s status.
-4. **Data Management**: All persistent data is managed through PostgreSQL, with Redis enhancing performance through caching.
-5. **Asynchronous Communication**: Kafka ensures all components communicate efficiently, allowing the system to handle high traffic with minimal latency.
+```
+teleport/
+├── application/           # Next.js frontend & API
+│   ├── src/
+│   │   ├── app/          # App router pages
+│   │   ├── components/   # React components
+│   │   ├── lib/          # Utilities & clients
+│   │   ├── server/       # tRPC routers
+│   │   └── trpc/         # tRPC client config
+│   ├── prisma/           # Database schema
+│   └── Dockerfile
+├── matchmaker/           # Temporal worker service
+│   ├── src/
+│   │   ├── activities/   # Temporal activities
+│   │   ├── workflows/    # Temporal workflows
+│   │   └── worker.ts     # Worker entry point
+│   ├── lib/              # Shared utilities
+│   └── Dockerfile
+├── docker-compose.yml    # Full stack orchestration
+└── README.md
+```
+
+---
+
+## Monitoring
+
+### Temporal UI (http://localhost:8080)
+- View active/completed workflows
+- Inspect workflow history and signals
+- Debug failed workflows
+
+### Application Logs
+```bash
+# All services
+docker-compose logs -f
+
+# Specific service
+docker-compose logs -f matchmaker
+docker-compose logs -f application
+```

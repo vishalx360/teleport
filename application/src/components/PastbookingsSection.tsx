@@ -6,12 +6,23 @@ import { BookingStatus } from "@prisma/client";
 import { ArrowRight } from "lucide-react";
 import TimeAgo from 'react-timeago';
 import { formattedStatus } from "@/lib/constants";
+import { useSession } from "next-auth/react";
 
 export default function PastbookingsSection() {
-    const { data: pastBookings, isLoading, error } = api.user.getAllBookings.useQuery();
+    const { data: session } = useSession();
+    const isDriver = session?.user?.role === 'DRIVER';
+    
+    const { data: userBookings, isLoading: isLoadingUser } = api.user.getAllBookings.useQuery(undefined, {
+        enabled: !isDriver,
+    });
+    const { data: driverBookings, isLoading: isLoadingDriver } = api.driver.getAllBookings.useQuery(undefined, {
+        enabled: isDriver,
+    });
+    
+    const pastBookings = isDriver ? driverBookings : userBookings;
+    const isLoading = isDriver ? isLoadingDriver : isLoadingUser;
+    
     if (isLoading) return <p>Loading...</p>;
-
-    if (error) return <p>Error loading booking</p>;
     return (
         <div>
             <h3 className="font-bold mb-3 text">
@@ -65,8 +76,9 @@ function PastBookingCard({ booking }: {
                 <p className="font-bold text-md">
                     {booking.pickupAddress?.nickname} <ArrowRight className="inline" /> {booking.deliveryAddress.nickname}
                 </p>
-                <TimeAgo date={booking.createdAt} />
-
+                <p className="text-xs text-gray-500">
+                    Updated <TimeAgo date={booking.updatedAt} />
+                </p>
                 <p className="text-xs text-gray-600">
                     {formattedStatus[booking.status]}
                 </p>

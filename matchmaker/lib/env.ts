@@ -4,18 +4,15 @@ import { z } from "zod";
 export const env = createEnv({
   server: {
     REDIS_URL: z.string().url(),
+    DATABASE_URL: z.string().url(),
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
 
-    PUSHER_APP_ID: z.string(),
-    PUSHER_SECRET: z.string(),
-    PUSHER_CLUSTER: z.string(),
-    PUSHER_KEY: z.string(),
-
-    KAFKA_URL: z.string(),
-    KAFKA_API_KEY: z.string(),
-    KAFKA_API_SECRET: z.string(),
+    // Temporal configuration
+    TEMPORAL_ADDRESS: z.string().default("localhost:7233"),
+    TEMPORAL_NAMESPACE: z.string().default("default"),
+    TEMPORAL_TASK_QUEUE: z.string().default("matchmaking-queue"),
   },
   runtimeEnv: process.env,
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,

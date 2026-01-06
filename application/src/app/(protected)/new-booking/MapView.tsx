@@ -1,4 +1,3 @@
-import { Address } from "@prisma/client";
 import Map from "./Map";
 
 export interface Coordinates {
@@ -6,16 +5,21 @@ export interface Coordinates {
     longitude: number | null;
 }
 
+interface LocationWithCoords {
+    latitude: number;
+    longitude: number;
+}
+
 const MapView = ({ pickupLocation, deliveryLocation,
     driverLocation,
-    distance, duration, calculating
+    distance, duration, calculating = false
 }: {
-    pickupLocation: Address;
-    deliveryLocation: Address;
-    driverLocation: Coordinates
+    pickupLocation: LocationWithCoords;
+    deliveryLocation: LocationWithCoords;
+    driverLocation?: Coordinates;
     distance: number;
     duration: number;
-    calculating: boolean;
+    calculating?: boolean;
 }) => {
     // Build extra points only if driver location has valid coordinates
     const extraPoints = (driverLocation && driverLocation.latitude !== null && driverLocation.longitude !== null) 

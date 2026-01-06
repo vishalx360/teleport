@@ -1,28 +1,67 @@
-# Matchmaking Service
+# Matchmaker Service
 
-This service will listen to a kafka topic called BOOKINGS
-once a message is recevied, it will start the matchmaking process
+Temporal-based matchmaking service that orchestrates driver assignment for bookings.
 
-## Matchmaking Process
+## Architecture
 
-1. Get the booking details from the message
-   1. bookingId
-   2. pickup latitude and longitude
-   3. dropoff latitude and longitude
-   4. vehicle type
-2. Get all the nearest drivers from the redis location with the vehicle type
-3. Get the nearest available driver from the list of drivers
-   1. Send a notification to the driver (push notification : websocket)
-   2. Mark driver busy with this bookingId in the redis (Lock) for 10 seconds
-   3. if the driver accepts the booking
-      1. remove the driver from the available list of drivers
-      2. send the booking details to the driver and user.
-      3. update the booking status as accepted
-      4. assign the driver to the booking
-   4. if the driver rejects the booking
-      1. mark the driver available again
-      2. mark driver unavailable for this bookingId
-      3. get the next nearest driver, repeat the process
-4. if no driver is available
-   1. send a message to the user that no driver is available.
-   2. mark the booking as failed.
+This service uses Temporal.io for durable workflow orchestration:
+
+- **Workflow**: `matchmakingWorkflow` - Orchestrates the process of finding and assigning a driver
+- **Activities**: Handle I/O operations like Redis queries, database updates, and notifications
+
+## Prerequisites
+
+- Node.js 18+
+- Temporal Server running (see docker-compose in root)
+- Redis for geolocation and PubSub
+- PostgreSQL with Prisma schema
+
+## Setup
+
+1. Install dependencies:
+```bash
+pnpm install
+```
+
+2. Generate Prisma client:
+```bash
+pnpm prisma generate
+```
+
+3. Create `.env` file:
+```bash
+cp .env.example .env
+```
+
+4. Start the worker:
+```bash
+pnpm dev
+```
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `REDIS_URL` | Redis connection URL | - |
+| `DATABASE_URL` | PostgreSQL connection URL | - |
+| `TEMPORAL_ADDRESS` | Temporal server address | `localhost:7233` |
+| `TEMPORAL_NAMESPACE` | Temporal namespace | `default` |
+| `TEMPORAL_TASK_QUEUE` | Task queue name | `matchmaking-queue` |
+
+## Workflow Flow
+
+1. Receive booking data
+2. Query Redis for nearby available drivers (GEORADIUS)
+3. For each driver:
+   - Check availability
+   - Lock driver
+   - Send booking request via Redis PubSub (SSE delivery)
+   - Wait for response signal or timeout
+4. On acceptance: Update booking status, notify user
+5. On rejection/timeout: Try next driver
+6. If no driver accepts: Mark booking as failed
+
+## Signals
+
+- `driverResponse` - Sent when a driver accepts or rejects a booking
+  - Payload: `{ driverId: string, accepted: boolean }`

@@ -7,12 +7,23 @@ const signupSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   name: z.string().optional(),
-});
+  role: z.enum(["USER", "DRIVER"]).optional().default("USER"),
+  vehicleClass: z.enum(["BIKE", "PICKUP_TRUCK", "TRUCK"]).optional(),
+}).refine(
+  (data) => {
+    // If role is DRIVER, vehicleClass is required
+    if (data.role === "DRIVER" && !data.vehicleClass) {
+      return false;
+    }
+    return true;
+  },
+  { message: "Vehicle class is required for drivers", path: ["vehicleClass"] }
+);
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { email, password, name } = signupSchema.parse(body);
+    const { email, password, name, role, vehicleClass } = signupSchema.parse(body);
 
     // Check if user already exists
     const existingUser = await db.user.findUnique({
@@ -35,6 +46,8 @@ export async function POST(request: Request) {
         email,
         password: hashedPassword,
         name: name ?? null,
+        role: role,
+        vehicleClass: role === "DRIVER" ? vehicleClass : null,
       },
     });
 

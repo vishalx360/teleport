@@ -10,60 +10,13 @@ import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import { TRPCError } from "@trpc/server";
 import { BookingStatus, type VehicleClass } from "@prisma/client";
 import { getDistanceAndDuration } from "@/lib/geoUtils";
+import {
+  MATCHMAKING_WORKFLOW,
+  MATCHMAKING_TASK_QUEUE,
+  type MatchmakingWorkflowInput,
+} from "@/lib/temporalClient";
 
 export const userRouter = createTRPCRouter({
-  testPusher: protectedProcedure.mutation(async ({ ctx, input }) => {
-    const response = await ctx.pusher.trigger("booking", "UPDATE", {
-      message: "Booking updated",
-    });
-    console.log(response);
-    return response;
-  }),
-  pusherUserAuth: protectedProcedure
-    .input(z.string())
-    .mutation(async ({ ctx, input }) => {
-      const response = ctx.pusher.authenticateUser(input, {
-        id: ctx.session.user.id,
-        user_info: ctx.session.user,
-      });
-      return response;
-    }),
-  pusherChannelAuth: protectedProcedure
-    .input(
-      z.object({
-        socketId: z.string(),
-        channelName: z.string(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const [channelType, channelName, key] = input.channelName.split("-");
-      if (channelName === "booking") {
-        const isMember = await ctx.db.booking.count({
-          where: {
-            id: key,
-            OR: [
-              { userId: ctx.session.user.id },
-              { driverId: ctx.session.user.id },
-            ],
-          },
-        });
-        if (isMember === 0) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "You are not allowed to access this channel",
-          });
-        }
-      }
-      const response = ctx.pusher.authorizeChannel(
-        input.socketId,
-        input.channelName,
-        {
-          user_id: ctx.session.user.id,
-          user_info: ctx.session.user,
-        },
-      );
-      return response;
-    }),
   setRole: protectedProcedure
     .input(userRoleSchema)
     .mutation(async ({ ctx, input }) => {
@@ -100,6 +53,7 @@ export const userRouter = createTRPCRouter({
   makeBooking: protectedProcedure
     .input(bookingSchema)
     .mutation(async ({ ctx, input }) => {
+      // Create booking in database
       const booking = await ctx.db.booking.create({
         data: {
           vehicleClass: input.vehicleClass as VehicleClass,
@@ -107,17 +61,57 @@ export const userRouter = createTRPCRouter({
           distance: input.distance,
           deliveryAddressId: input.deliveryAddressId,
           pickupAddressId: input.pickupAddressId,
-          price: input.price, // TODO: calculate in backend
-          duration: input.duration, // TODO: calculate in backend
+          price: input.price,
+          duration: input.duration,
         },
         include: {
           deliveryAddress: true,
           pickupAddress: true,
         },
       });
-      await ctx.produceMessage("BOOKINGS", booking);
+
+      // Start Temporal workflow for matchmaking
+      const temporalClient = await ctx.getTemporalClient();
+      const workflowInput: MatchmakingWorkflowInput = {
+        bookingId: booking.id,
+        userId: ctx.session.user.id,
+        vehicleClass: booking.vehicleClass,
+        pickupLatitude: booking.pickupAddress.latitude,
+        pickupLongitude: booking.pickupAddress.longitude,
+        deliveryLatitude: booking.deliveryAddress.latitude,
+        deliveryLongitude: booking.deliveryAddress.longitude,
+        price: booking.price,
+        distance: booking.distance,
+        duration: booking.duration,
+        pickupAddress: {
+          id: booking.pickupAddress.id,
+          nickname: booking.pickupAddress.nickname,
+          address: booking.pickupAddress.address,
+          contactName: booking.pickupAddress.contactName,
+          mobile: booking.pickupAddress.mobile,
+          latitude: booking.pickupAddress.latitude,
+          longitude: booking.pickupAddress.longitude,
+        },
+        deliveryAddress: {
+          id: booking.deliveryAddress.id,
+          nickname: booking.deliveryAddress.nickname,
+          address: booking.deliveryAddress.address,
+          contactName: booking.deliveryAddress.contactName,
+          mobile: booking.deliveryAddress.mobile,
+          latitude: booking.deliveryAddress.latitude,
+          longitude: booking.deliveryAddress.longitude,
+        },
+      };
+
+      await temporalClient.workflow.start(MATCHMAKING_WORKFLOW, {
+        taskQueue: MATCHMAKING_TASK_QUEUE,
+        workflowId: `matchmaking-${booking.id}`,
+        args: [workflowInput],
+      });
+
       return booking;
     }),
+
   rebook: protectedProcedure
     .input(z.string())
     .mutation(async ({ ctx, input }) => {
@@ -131,28 +125,79 @@ export const userRouter = createTRPCRouter({
           pickupAddress: true,
         },
       });
+
       if (!booking) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Booking not found",
         });
       }
-      await ctx.produceMessage("BOOKINGS", booking);
+
+      // Reset booking status
+      await ctx.db.booking.update({
+        where: { id: booking.id },
+        data: { status: BookingStatus.BOOKED, driverId: null },
+      });
+
+      // Start Temporal workflow for matchmaking
+      const temporalClient = await ctx.getTemporalClient();
+      const workflowInput: MatchmakingWorkflowInput = {
+        bookingId: booking.id,
+        userId: ctx.session.user.id,
+        vehicleClass: booking.vehicleClass,
+        pickupLatitude: booking.pickupAddress.latitude,
+        pickupLongitude: booking.pickupAddress.longitude,
+        deliveryLatitude: booking.deliveryAddress.latitude,
+        deliveryLongitude: booking.deliveryAddress.longitude,
+        price: booking.price,
+        distance: booking.distance,
+        duration: booking.duration,
+        pickupAddress: {
+          id: booking.pickupAddress.id,
+          nickname: booking.pickupAddress.nickname,
+          address: booking.pickupAddress.address,
+          contactName: booking.pickupAddress.contactName,
+          mobile: booking.pickupAddress.mobile,
+          latitude: booking.pickupAddress.latitude,
+          longitude: booking.pickupAddress.longitude,
+        },
+        deliveryAddress: {
+          id: booking.deliveryAddress.id,
+          nickname: booking.deliveryAddress.nickname,
+          address: booking.deliveryAddress.address,
+          contactName: booking.deliveryAddress.contactName,
+          mobile: booking.deliveryAddress.mobile,
+          latitude: booking.deliveryAddress.latitude,
+          longitude: booking.deliveryAddress.longitude,
+        },
+      };
+
+      await temporalClient.workflow.start(MATCHMAKING_WORKFLOW, {
+        taskQueue: MATCHMAKING_TASK_QUEUE,
+        workflowId: `matchmaking-${booking.id}-${Date.now()}`,
+        args: [workflowInput],
+      });
+
       return booking;
     }),
 
   getBooking: protectedProcedure
     .input(z.string())
     .query(async ({ ctx, input }) => {
-      const booking = await ctx.db.booking.findUnique({
+      // Allow both user and driver to view the booking
+      const booking = await ctx.db.booking.findFirst({
         where: {
           id: input,
-          userId: ctx.session.user.id,
+          OR: [
+            { userId: ctx.session.user.id },
+            { driverId: ctx.session.user.id },
+          ],
         },
         include: {
           deliveryAddress: true,
           pickupAddress: true,
           driver: true,
+          user: true,
         },
       });
 
@@ -162,7 +207,11 @@ export const userRouter = createTRPCRouter({
           message: "Booking not found",
         });
       }
-      const returnData = {
+      const returnData: {
+        booking: typeof booking;
+        lastEta: { distance: number; duration: number } | null;
+        lastUpdatedDriverLocation: { longitude: string; latitude: string } | null;
+      } = {
         booking,
         lastEta: null,
         lastUpdatedDriverLocation: null,
@@ -172,35 +221,44 @@ export const userRouter = createTRPCRouter({
           `DRIVER_LOCATIONS:${booking.vehicleClass}`,
           booking.driverId,
         );
-        const driverCoordinates = {
-          longitude: lastUpdatedDriverLocation[0],
-          latitude: lastUpdatedDriverLocation[1]
-        }
-        returnData.lastUpdatedDriverLocation = driverCoordinates
+        if (lastUpdatedDriverLocation) {
+          const driverCoordinates = {
+            longitude: lastUpdatedDriverLocation[0],
+            latitude: lastUpdatedDriverLocation[1],
+          };
+          returnData.lastUpdatedDriverLocation = driverCoordinates;
 
-        const pickupCoordinates = {
-          latitude: booking.pickupAddress.latitude,
-          longitude: booking.pickupAddress.longitude
-        }
-        const deliveryCoordinates = {
-          latitude: booking.deliveryAddress.latitude,
-          longitude: booking.deliveryAddress.longitude
-        }
-        switch (booking?.status) {
-          case BookingStatus.ACCEPTED:
-            const etaToPickup = await getDistanceAndDuration(pickupCoordinates, driverCoordinates);
-            returnData.lastEta = etaToPickup;
-            break;
-          case BookingStatus.PICKED_UP:
-          case BookingStatus.IN_TRANSIT:
-            const etaToDelivery = await getDistanceAndDuration(driverCoordinates, deliveryCoordinates);
-            returnData.lastEta = etaToDelivery
-            break;
+          const pickupCoordinates = {
+            latitude: booking.pickupAddress.latitude,
+            longitude: booking.pickupAddress.longitude,
+          };
+          const deliveryCoordinates = {
+            latitude: booking.deliveryAddress.latitude,
+            longitude: booking.deliveryAddress.longitude,
+          };
+          switch (booking?.status) {
+            case BookingStatus.ACCEPTED:
+              const etaToPickup = await getDistanceAndDuration(
+                pickupCoordinates,
+                driverCoordinates,
+              );
+              returnData.lastEta = etaToPickup;
+              break;
+            case BookingStatus.PICKED_UP:
+            case BookingStatus.IN_TRANSIT:
+              const etaToDelivery = await getDistanceAndDuration(
+                driverCoordinates,
+                deliveryCoordinates,
+              );
+              returnData.lastEta = etaToDelivery;
+              break;
+          }
         }
       }
       return returnData;
     }),
-  getAllBookings: protectedProcedure.query(async ({ ctx, input }) => {
+
+  getAllBookings: protectedProcedure.query(async ({ ctx }) => {
     const bookings = await ctx.db.booking.findMany({
       where: {
         userId: ctx.session.user.id,
@@ -221,12 +279,16 @@ export const userRouter = createTRPCRouter({
           },
         },
       },
+      orderBy: {
+        updatedAt: 'desc',
+      },
     });
     if (!bookings) {
       throw new TRPCError({ code: "NOT_FOUND", message: "Booking not found" });
     }
     return bookings;
   }),
+
   saveAddress: protectedProcedure
     .input(addressSchema)
     .mutation(async ({ ctx, input }) => {
@@ -271,5 +333,56 @@ export const userRouter = createTRPCRouter({
         },
         data: input,
       });
+    }),
+
+  cancelBooking: protectedProcedure
+    .input(z.string())
+    .mutation(async ({ ctx, input }) => {
+      const booking = await ctx.db.booking.findUnique({
+        where: {
+          id: input,
+          userId: ctx.session.user.id,
+        },
+      });
+
+      if (!booking) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Booking not found",
+        });
+      }
+
+      // Only allow cancellation before pickup
+      const cancellableStatuses = [
+        BookingStatus.BOOKED,
+        BookingStatus.ACCEPTED,
+        BookingStatus.ARRIVED,
+      ];
+
+      if (!cancellableStatuses.includes(booking.status)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot cancel booking after pickup",
+        });
+      }
+
+      // Update booking status to cancelled
+      await ctx.db.booking.update({
+        where: { id: booking.id },
+        data: { status: BookingStatus.CANCELLED },
+      });
+
+      // Cancel the Temporal workflow if it exists
+      try {
+        const temporalClient = await ctx.getTemporalClient();
+        const handle = temporalClient.workflow.getHandle(
+          `matchmaking-${booking.id}`,
+        );
+        await handle.cancel();
+      } catch {
+        // Workflow may not exist or already completed, ignore
+      }
+
+      return { message: "Booking cancelled successfully" };
     }),
 });
