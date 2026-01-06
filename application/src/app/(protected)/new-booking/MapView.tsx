@@ -1,6 +1,4 @@
-import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
 import { Address } from "@prisma/client";
-import 'mapbox-gl/dist/mapbox-gl.css';
 import Map from "./Map";
 
 export interface Coordinates {
@@ -19,6 +17,10 @@ const MapView = ({ pickupLocation, deliveryLocation,
     duration: number;
     calculating: boolean;
 }) => {
+    // Build extra points only if driver location has valid coordinates
+    const extraPoints = (driverLocation && driverLocation.latitude !== null && driverLocation.longitude !== null) 
+        ? [{ latitude: driverLocation.latitude, longitude: driverLocation.longitude, markerText: "Driver", inview: false }] 
+        : [];
 
     return (
         <div className="relative h-48 w-full rounded-lg overflow-hidden">
@@ -27,7 +29,7 @@ const MapView = ({ pickupLocation, deliveryLocation,
                     { latitude: pickupLocation.latitude, longitude: pickupLocation.longitude, markerText: "Pickup", inview: true },
                     { latitude: deliveryLocation.latitude, longitude: deliveryLocation.longitude, markerText: "Delivery", inview: true }
                 ]}
-                extraPoints={(driverLocation) ? [{ latitude: driverLocation.latitude, longitude: driverLocation.longitude, markerText: "Driver", inview: false }] : []}
+                extraPoints={extraPoints}
             />
             <div className="absolute top-2 left-2 bg-white/20 backdrop-blur-lg px-2 py-1 rounded text-sm font-medium">
                 {

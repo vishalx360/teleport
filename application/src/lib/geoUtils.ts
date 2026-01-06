@@ -1,6 +1,3 @@
-import { env } from "@/env";
-import axios from "axios";
-
 interface Coordinates {
   latitude: number;
   longitude: number;
@@ -11,23 +8,29 @@ interface DistanceAndDuration {
   duration: number;
 }
 
+// Use OSRM for driving directions (free, no API key required)
 export const getDistanceAndDuration = async (
   start: Coordinates,
   end: Coordinates,
-): Promise<DistanceAndDuration> => {
-  const mapboxAccessToken = env.NEXT_PUBLIC_MAPBOX_TOKEN; // Your Mapbox access token
-  const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?access_token=${mapboxAccessToken}`;
+): Promise<DistanceAndDuration | null> => {
+  const url = `https://router.project-osrm.org/route/v1/driving/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=false`;
 
   try {
-    const response = await axios.get(url);
-    const data = response.data.routes[0]; // Distance in meters
-
-    if (!data) {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Teleport-App/1.0'
+      }
+    });
+    const data = await response.json();
+    
+    if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
       console.log("No routes data found");
-      return null
+      return null;
     }
-    const distanceInKm = (data.distance / 1000).toFixed(2); // Convert to kilometers
-    const durationInMinutes = Math.floor(data.duration / 60); // Convert to minutes
+    
+    const route = data.routes[0];
+    const distanceInKm = (route.distance / 1000).toFixed(2); // Convert meters to kilometers
+    const durationInMinutes = Math.floor(route.duration / 60); // Convert seconds to minutes
 
     return {
       distance: distanceInKm,
@@ -39,7 +42,7 @@ export const getDistanceAndDuration = async (
   }
 };
 
-export const getDistanceFromLatLonInMeters = (lat1, lon1, lat2, lon2) => {
+export const getDistanceFromLatLonInMeters = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
   const R = 6371000; // Radius of the Earth in meters
   const dLat = (lat2 - lat1) * (Math.PI / 180);
   const dLon = (lon2 - lon1) * (Math.PI / 180);
@@ -53,17 +56,28 @@ export const getDistanceFromLatLonInMeters = (lat1, lon1, lat2, lon2) => {
   return R * c;
 };
 
+// Use Nominatim for reverse geocoding (free, no API key required)
 export const GetAddressFromCoordinates = async ({
   longitude,
   latitude,
 }: {
   longitude: number;
   latitude: number;
-}) => {
-  const response = await fetch(
-    `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${env.NEXT_PUBLIC_MAPBOX_TOKEN}`,
-  );
-  const data = await response.json();
-  const address = data.features[0]?.place_name || "Unknown location";
-  return address;
+}): Promise<string> => {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
+      {
+        headers: {
+          'User-Agent': 'Teleport-App/1.0' // Nominatim requires a User-Agent
+        }
+      }
+    );
+    const data = await response.json();
+    const address = data.display_name || "Unknown location";
+    return address;
+  } catch (error) {
+    console.error("Error fetching address:", error);
+    return "Unknown location";
+  }
 };

@@ -1,12 +1,9 @@
-import MapboxGeocoder from '@mapbox/mapbox-gl-geocoder';
-import mapboxgl, { Map, Marker } from 'mapbox-gl';
-import { useEffect, useRef, useState } from 'react';
-import LocationForm from './LocationForm';
+'use client';
 
-import { env } from '@/env';
 import { DEFAULT_COORDINATES, DEFAULT_ZOOM } from '@/lib/constants';
-import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
-import 'mapbox-gl/dist/mapbox-gl.css';
+import { useEffect, useState } from 'react';
+import LocationForm from './LocationForm';
+import { Map, MapControls, MapMarker, MarkerContent, useMap } from './ui/map';
 
 export interface LocationType {
     address: string;
@@ -14,96 +11,86 @@ export interface LocationType {
     longitude: number | null;
 }
 
+// Component to handle map click events
+function MapClickHandler({ onLocationSelect }: { 
+    onLocationSelect: (coords: { lng: number; lat: number }) => void 
+}) {
+    const { map, isLoaded } = useMap();
+
+    useEffect(() => {
+        if (!map || !isLoaded) return;
+
+        const handleClick = (e: maplibregl.MapMouseEvent) => {
+            onLocationSelect({ lng: e.lngLat.lng, lat: e.lngLat.lat });
+        };
+
+        map.on('click', handleClick);
+        return () => {
+            map.off('click', handleClick);
+        };
+    }, [map, isLoaded, onLocationSelect]);
+
+    return null;
+}
+
+// Reverse geocode using Nominatim (free, no API key required)
+async function reverseGeocode(longitude: number, latitude: number): Promise<string> {
+    try {
+        const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
+            {
+                headers: {
+                    'User-Agent': 'Teleport-App/1.0' // Nominatim requires a User-Agent
+                }
+            }
+        );
+        const data = await response.json();
+        return data.display_name || 'Unknown location';
+    } catch (error) {
+        console.error('Reverse geocoding error:', error);
+        return 'Unknown location';
+    }
+}
+
 const MapPicker = ({ onSubmit, isPending }: {
     onSubmit: () => void;
     isPending: boolean;
 }) => {
-    const mapContainerRef = useRef<HTMLDivElement | null>(null);
-    const mapRef = useRef<Map | null>(null);
     const [selectedLocation, setSelectedLocation] = useState<LocationType>({
         address: '',
         latitude: null,
         longitude: null,
     });
-    const markerRef = useRef<Marker | null>(null);
 
-    useEffect(() => {
-        mapboxgl.accessToken = env.NEXT_PUBLIC_MAPBOX_TOKEN;
-
-        // Initialize the map
-        if (mapContainerRef.current) {
-            mapRef.current = new mapboxgl.Map({
-                container: mapContainerRef.current,
-                style: 'mapbox://styles/mapbox/streets-v12',
-                center: DEFAULT_COORDINATES,
-                zoom: DEFAULT_ZOOM,
-            });
-
-            // Add geocoder control
-            mapRef.current.addControl(
-                new MapboxGeocoder({
-                    accessToken: mapboxgl.accessToken,
-                    mapboxgl: mapboxgl,
-                })
-            );
-
-            // Add navigation and geolocation controls
-            mapRef.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
-            const geolocateControl = new mapboxgl.GeolocateControl({
-                positionOptions: {
-                    enableHighAccuracy: true,
-                },
-                trackUserLocation: true,
-                showUserHeading: true,
-            });
-            mapRef.current.addControl(geolocateControl, 'top-right');
-
-            geolocateControl.on('geolocate', (event) => {
-                const { longitude, latitude } = event.coords;
-                updateLocation(longitude, latitude);
-            });
-
-            mapRef.current.on('click', (event) => {
-                const { lng, lat } = event.lngLat;
-                updateLocation(lng, lat);
-            });
-        }
-
-        return () => {
-            mapRef.current?.remove();
-        };
-    }, []);
-
-    // Function to update location based on coordinates
-    const updateLocation = async (longitude: number, latitude: number) => {
-        const response = await fetch(
-            `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${mapboxgl.accessToken}`
-        );
-        const data = await response.json();
-        const address = data.features[0]?.place_name || 'Unknown location';
-
+    const handleLocationSelect = async (coords: { lng: number; lat: number }) => {
+        const address = await reverseGeocode(coords.lng, coords.lat);
         setSelectedLocation({
             address,
-            latitude,
-            longitude,
+            latitude: coords.lat,
+            longitude: coords.lng,
         });
+    };
 
-        if (markerRef.current) {
-            markerRef.current.remove();
-        }
-        markerRef.current = new mapboxgl.Marker()
-            .setLngLat([longitude, latitude])
-            .addTo(mapRef.current as mapboxgl.Map);
-
-        mapRef.current?.flyTo({ center: [longitude, latitude], zoom: 14 });
+    const handleLocate = async (coords: { longitude: number; latitude: number }) => {
+        const address = await reverseGeocode(coords.longitude, coords.latitude);
+        setSelectedLocation({
+            address,
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+        });
     };
 
     const handleCurrentLocation = () => {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
-                (position) => {
+                async (position) => {
                     const { longitude, latitude } = position.coords;
-                    updateLocation(longitude, latitude);
+                    const address = await reverseGeocode(longitude, latitude);
+                    setSelectedLocation({
+                        address,
+                        latitude,
+                        longitude,
+                    });
                 },
                 (error) => {
                     alert('Unable to retrieve your location.');
@@ -117,7 +104,32 @@ const MapPicker = ({ onSubmit, isPending }: {
 
     return (
         <div className='flex md:flex-row-reverse flex-col gap-4'>
-            <div ref={mapContainerRef} className="w-full h-[350px] rounded-xl" />
+            <div className="w-full h-[350px] rounded-xl overflow-hidden">
+                <Map 
+                    center={[DEFAULT_COORDINATES[0] ?? -74.006, DEFAULT_COORDINATES[1] ?? 40.7128]} 
+                    zoom={DEFAULT_ZOOM}
+                >
+                    <MapClickHandler onLocationSelect={handleLocationSelect} />
+                    <MapControls 
+                        position="top-right" 
+                        showZoom 
+                        showLocate 
+                        onLocate={handleLocate}
+                    />
+                    {selectedLocation.latitude !== null && selectedLocation.longitude !== null && (
+                        <MapMarker
+                            longitude={selectedLocation.longitude}
+                            latitude={selectedLocation.latitude}
+                        >
+                            <MarkerContent>
+                                <div className="size-6 rounded-full bg-blue-500 border-2 border-white shadow-lg flex items-center justify-center">
+                                    <div className="size-2 rounded-full bg-white" />
+                                </div>
+                            </MarkerContent>
+                        </MapMarker>
+                    )}
+                </Map>
+            </div>
             <LocationForm
                 handleCurrentLocation={handleCurrentLocation}
                 mapLocation={selectedLocation}
