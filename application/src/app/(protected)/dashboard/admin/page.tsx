@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import LinkButton from "@/components/LinkButton";
 import { api } from "@/trpc/react";
-import { BookingStatus } from "@prisma/client";
+import { BookingStatus } from "@/generated/prisma/enums";
 import { ArrowRight } from "lucide-react";
 import TimeAgo from 'react-timeago';
 import { formattedStatus } from "@/lib/constants";
@@ -74,9 +74,8 @@ function PastBookingCard({ booking }: {
     status: BookingStatus;
     pickupAddressId: string;
     deliveryAddressId: string;
-    distance: number;
-    duration: number;
-    price: number;
+    totalAmount: number;
+    currency: string;
     id: string;
     userId: string;
     driverId: string | null;
@@ -100,9 +99,8 @@ function PastBookingCard({ booking }: {
         </p>
       </div>
       <h1 className="font-bold text-lg">
-        ₹{booking.price}
+        {new Intl.NumberFormat("en-IN", { style: "currency", currency: booking.currency }).format(booking.totalAmount / 100)}
       </h1>
     </Link>
   )
 }
-

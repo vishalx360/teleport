@@ -1,42 +1,62 @@
 import { useEffect, useState } from "react";
 import { useGeolocated } from "react-geolocated";
 import { toast } from "sonner";
+import type { MapCoordinates } from "@/components/maps/MapboxMap";
 
 // Helper function to calculate distance between two coordinates in meters
-function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
+function getDistanceFromLatLonInMeters(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+) {
   const R = 6371e3; // Radius of Earth in meters
-  const toRadians = (deg) => (deg * Math.PI) / 180;
+  const toRadians = (deg: number) => (deg * Math.PI) / 180;
   const dLat = toRadians(lat2 - lat1);
   const dLon = toRadians(lon2 - lon1);
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(toRadians(lat1)) *
-    Math.cos(toRadians(lat2)) *
-    Math.sin(dLon / 2) *
-    Math.sin(dLon / 2);
+      Math.cos(toRadians(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const distance = R * c; // Distance in meters
   return distance;
 }
 
-function useActiveLocation({ updateInterval = 60, distanceThreshold = 200 }) {
-  const { coords, getPosition, isGeolocationAvailable, positionError, isGeolocationEnabled } = useGeolocated({
+function useActiveLocation({
+  updateInterval = 60,
+  distanceThreshold = 200,
+}: {
+  updateInterval?: number;
+  distanceThreshold?: number;
+} = {}) {
+  const {
+    coords,
+    getPosition,
+    isGeolocationAvailable,
+    positionError,
+    isGeolocationEnabled,
+  } = useGeolocated({
     positionOptions: { enableHighAccuracy: false },
     watchPosition: true,
     userDecisionTimeout: 5000,
   });
 
   const [previousCoords, setPreviousCoords] = useState({
-    latitude: null,
-    longitude: null,
+    latitude: null as number | null,
+    longitude: null as number | null,
   });
-  const [currentCoords, setCurrentCoords] = useState(null);
+  const [currentCoords, setCurrentCoords] = useState<MapCoordinates | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!isGeolocationAvailable) {
-      toast.warning("Location services are not available.")
+      toast.warning("Location services are not available.");
       return;
-    };
+    }
     if (!isGeolocationEnabled) {
       toast.warning("Please enable location services.");
     }
@@ -47,7 +67,12 @@ function useActiveLocation({ updateInterval = 60, distanceThreshold = 200 }) {
     }, updateInterval * 1000); // Update interval in seconds
 
     return () => clearInterval(intervalId);
-  }, [getPosition, updateInterval]);
+  }, [
+    getPosition,
+    isGeolocationAvailable,
+    isGeolocationEnabled,
+    updateInterval,
+  ]);
 
   useEffect(() => {
     if (coords && coords.latitude && coords.longitude) {
@@ -82,7 +107,12 @@ function useActiveLocation({ updateInterval = 60, distanceThreshold = 200 }) {
     }
   }, [coords, previousCoords, distanceThreshold]);
 
-  return { currentCoords, positionError };
+  return {
+    currentCoords,
+    positionError,
+    isGeolocationAvailable,
+    isGeolocationEnabled,
+  };
 }
 
 export default useActiveLocation;

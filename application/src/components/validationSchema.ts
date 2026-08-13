@@ -65,10 +65,10 @@ export const availablitySchema = z.object({
 });
 
 export const bookingSchema = z.object({
-  vehicleClass: z.string(),
+  vehicleClass: z.enum(["BIKE", "PICKUP_TRUCK", "TRUCK"]),
   pickupAddressId: z.string(),
   deliveryAddressId: z.string(),
-  distance: z.number(),
-  duration: z.number(),
-  price: z.number(),
+}).refine((input) => input.pickupAddressId !== input.deliveryAddressId, {
+  message: "Pickup and delivery addresses must be different",
+  path: ["deliveryAddressId"],
 });

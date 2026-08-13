@@ -1,28 +1,70 @@
-# Matchmaking Service
+# Matchmaker
 
-This service will listen to a kafka topic called BOOKINGS
-once a message is recevied, it will start the matchmaking process
+Matchmaker is the delivery orchestration service. Kafka is the **durable event
+transport**; Temporal is the **only workflow engine**. Neither system performs
+the other’s responsibility.
 
-## Matchmaking Process
+## Kafka boundary
 
-1. Get the booking details from the message
-   1. bookingId
-   2. pickup latitude and longitude
-   3. dropoff latitude and longitude
-   4. vehicle type
-2. Get all the nearest drivers from the redis location with the vehicle type
-3. Get the nearest available driver from the list of drivers
-   1. Send a notification to the driver (push notification : websocket)
-   2. Mark driver busy with this bookingId in the redis (Lock) for 10 seconds
-   3. if the driver accepts the booking
-      1. remove the driver from the available list of drivers
-      2. send the booking details to the driver and user.
-      3. update the booking status as accepted
-      4. assign the driver to the booking
-   4. if the driver rejects the booking
-      1. mark the driver available again
-      2. mark driver unavailable for this bookingId
-      3. get the next nearest driver, repeat the process
-4. if no driver is available
-   1. send a message to the user that no driver is available.
-   2. mark the booking as failed.
+Kafka has one application topic and one consumer group:
+
+| Item  | Value                           | Owner                    | Purpose                                |
+| ----- | ------------------------------- | ------------------------ | -------------------------------------- |
+| Topic | `BOOKINGS`                      | Application outbox relay | Durable, replayable booking events     |
+| Event | `booking.matching_requested.v1` | Application              | Starts one driver-matching attempt     |
+| Key   | `bookingId`                     | Application              | Preserves per-booking ordering         |
+| Group | `matchmaking-group`             | Matchmaker               | Starts the Temporal workflow           |
+
+The payload is intentionally small:
+
+```json
+{ "bookingId": "...", "attempt": 1, "occurredAt": "2026-08-10T13:00:00.000Z" }
+```
+
+`eventId` and `eventType` are Kafka headers. Matchmaker only accepts
+`booking.matching_requested.v1`. It starts `booking-match-<bookingId>-<attempt>`; Temporal’s stable
+workflow ID makes Kafka’s at-least-once delivery safe.
+
+During migration, the consumer also accepts retained `booking.created.v1`
+events as attempt 1. New producers must only emit `booking.matching_requested.v1`.
+
+Do not publish directly from request handlers. Create a PostgreSQL
+`OutboxEvent` in the same transaction as the booking. The relay claims batches,
+publishes to Kafka, and retries failed batches with backoff.
+
+## Flow
+
+```text
+Next.js API → PostgreSQL Booking + OutboxEvent → Kafka BOOKINGS
+  → Matchmaker consumer → Temporal booking-match workflow → Redis / Soketi
+```
+
+Temporal loads the authoritative booking from PostgreSQL. Kafka therefore
+carries an integration event, not a duplicated booking record.
+
+## Local development
+
+From the repository root:
+
+```bash
+pnpm setup:local
+```
+
+Run the full local system from the repository root:
+
+```bash
+pnpm dev
+```
+
+Use plaintext local Kafka at `localhost:29092` with empty Kafka credentials.
+For a managed Kafka cluster, set `KAFKA_URL`, `KAFKA_API_KEY`, and
+`KAFKA_API_SECRET`; the client enables SASL/TLS only when both credentials are
+present.
+
+## Deployment guidance
+
+Kafka is not required to run the web UI alone, but it is required for a real
+booking to enter matching. Production should use a managed Kafka service or a
+separately operated Kafka cluster—not the single-broker Docker setup. Monitor
+consumer lag for `matchmaking-group`, failed/pending outbox rows, and the
+Temporal worker’s health.

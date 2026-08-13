@@ -30,9 +30,17 @@ export const env = createEnv({
 
     PUSHER_APP_ID: z.string(),
     PUSHER_SECRET: z.string(),
-    KAFKA_URL: z.string().url(),
-    KAFKA_API_KEY: z.string(),
-    KAFKA_API_SECRET: z.string(),
+    STRIPE_SECRET_KEY:
+      process.env.NODE_ENV === "production"
+        ? z.string().startsWith("sk_")
+        : z.string().startsWith("sk_").optional(),
+    STRIPE_WEBHOOK_SECRET:
+      process.env.NODE_ENV === "production"
+        ? z.string().startsWith("whsec_")
+        : z.string().startsWith("whsec_").optional(),
+    TEMPORAL_ADDRESS: z.string().default("localhost:7233"),
+    TEMPORAL_NAMESPACE: z.string().default("default"),
+    ALLOW_LOCAL_TEST_AUTH: z.coerce.boolean().default(false),
   },
 
   /**
@@ -44,6 +52,12 @@ export const env = createEnv({
     NEXT_PUBLIC_MAPBOX_TOKEN: z.string(),
     NEXT_PUBLIC_PUSHER_KEY: z.string(),
     NEXT_PUBLIC_PUSHER_CLUSTER: z.string(),
+    NEXT_PUBLIC_PUSHER_HOST: z.string().optional(),
+    NEXT_PUBLIC_PUSHER_PORT: z.coerce.number().optional(),
+    NEXT_PUBLIC_PUSHER_USE_TLS: z
+      .enum(["true", "false"])
+      .transform((value) => value === "true")
+      .default(process.env.NODE_ENV === "production" ? "true" : "false"),
   },
 
   /**
@@ -63,11 +77,16 @@ export const env = createEnv({
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
     NEXT_PUBLIC_PUSHER_KEY: process.env.NEXT_PUBLIC_PUSHER_KEY,
     NEXT_PUBLIC_PUSHER_CLUSTER: process.env.NEXT_PUBLIC_PUSHER_CLUSTER,
+    NEXT_PUBLIC_PUSHER_HOST: process.env.NEXT_PUBLIC_PUSHER_HOST,
+    NEXT_PUBLIC_PUSHER_PORT: process.env.NEXT_PUBLIC_PUSHER_PORT,
+    NEXT_PUBLIC_PUSHER_USE_TLS: process.env.NEXT_PUBLIC_PUSHER_USE_TLS,
     PUSHER_APP_ID: process.env.PUSHER_APP_ID,
     PUSHER_SECRET: process.env.PUSHER_SECRET,
-    KAFKA_URL: process.env.KAFKA_URL,
-    KAFKA_API_KEY: process.env.KAFKA_API_KEY,
-    KAFKA_API_SECRET: process.env.KAFKA_API_SECRET,
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+    TEMPORAL_ADDRESS: process.env.TEMPORAL_ADDRESS,
+    TEMPORAL_NAMESPACE: process.env.TEMPORAL_NAMESPACE,
+    ALLOW_LOCAL_TEST_AUTH: process.env.ALLOW_LOCAL_TEST_AUTH,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

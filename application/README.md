@@ -1,29 +1,46 @@
-# Create T3 App
+# Teleport Web Application
 
-This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
+The Next.js application contains the customer and driver web experience, tRPC
+API, NextAuth integration, and Prisma database access.
 
-## What's next? How do I make an app with this?
+## Local development
 
-We try to keep this project as simple as possible, so you can start with just the scaffolding we set up for you, and add additional things later when they become necessary.
+1. Use the repository-pinned Node.js version with `nvm install && nvm use`.
+2. From the repository root, run `pnpm setup:local`.
+3. Run `pnpm dev` to start this app and Matchmaker together.
+4. Open `http://localhost:3000/login` and use the seeded local accounts.
 
-If you are not familiar with the different technologies used in this project, please refer to the respective docs. If you still are in the wind, please join our [Discord](https://t3.gg/discord) and ask for help.
+Prisma 7 generates its client into `src/generated/prisma/`. Run
+`pnpm db:generate` after schema changes; use `pnpm db:migrate:dev` to create a
+development migration.
 
-- [Next.js](https://nextjs.org)
-- [NextAuth.js](https://next-auth.js.org)
-- [Prisma](https://prisma.io)
-- [Drizzle](https://orm.drizzle.team)
-- [Tailwind CSS](https://tailwindcss.com)
-- [tRPC](https://trpc.io)
+## Event responsibility
 
-## Learn More
+This application does **not** connect to Kafka. When a customer creates a
+booking, the API stores the booking, audit event, and `OutboxEvent` in one
+PostgreSQL transaction. Matchmaker relays that outbox record to Kafka and
+starts the Temporal workflow. This prevents request handlers from losing or
+duplicating event publication.
 
-To learn more about the [T3 Stack](https://create.t3.gg/), take a look at the following resources:
+The API publishes live browser updates through Soketi/Pusher and uses Redis for
+driver availability and live location. Those are temporary operational states;
+PostgreSQL remains the source of truth.
 
-- [Documentation](https://create.t3.gg/)
-- [Learn the T3 Stack](https://create.t3.gg/en/faq#what-learning-resources-are-currently-available) — Check out these awesome tutorials
+## Stripe local testing
 
-You can check out the [create-t3-app GitHub repository](https://github.com/t3-oss/create-t3-app) — your feedback and contributions are welcome!
+Add Stripe test-mode values to `application/.env` (or `.env.local`):
 
-## How do I deploy this?
+```dotenv
+STRIPE_SECRET_KEY="sk_test_..."
+STRIPE_WEBHOOK_SECRET="whsec_..."
+```
 
-Follow our deployment guides for [Vercel](https://create.t3.gg/en/deployment/vercel), [Netlify](https://create.t3.gg/en/deployment/netlify) and [Docker](https://create.t3.gg/en/deployment/docker) for more information.
+Forward Stripe test webhooks while the application is running:
+
+```bash
+stripe listen --forward-to localhost:3000/api/stripe/webhook
+```
+
+Copy the printed `whsec_...` value into `STRIPE_WEBHOOK_SECRET`. A booking stays
+`PENDING` until the signed `checkout.session.completed` webhook marks it paid
+and creates its matchmaking outbox event.

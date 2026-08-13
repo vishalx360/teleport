@@ -10,31 +10,31 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
+    --background: 222 18% 7%;
+    --foreground: 210 20% 96%;
+    --card: 222 17% 11%;
+    --card-foreground: 210 20% 96%;
+    --popover: 222 17% 11%;
+    --popover-foreground: 210 20% 96%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 13% 18%;
+    --secondary-foreground: 210 20% 96%;
+    --muted: 220 13% 18%;
+    --muted-foreground: 215 14% 65%;
+    --accent: 220 13% 18%;
+    --accent-foreground: 210 20% 96%;
+    --destructive: 0 72% 58%;
     --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
+    --border: 220 13% 22%;
+    --input: 220 13% 22%;
+    --ring: 217 91% 60%;
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
+    --radius: 1rem;
   }
   .dark {
     --background: 0 0% 3.9%;
@@ -69,6 +69,98 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    background-image: radial-gradient(
+        circle at 80% -10%,
+        rgba(59, 130, 246, 0.14),
+        transparent 28%
+      ),
+      radial-gradient(
+        circle at 0% 100%,
+        rgba(37, 99, 235, 0.1),
+        transparent 25%
+      );
   }
+
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer components {
+  .workspace-surface {
+    @apply border border-white/10 bg-[#17191e]/90 shadow-2xl shadow-black/20 backdrop-blur;
+  }
+  .workspace-panel {
+    @apply rounded-3xl border border-white/10 bg-[#17191e] shadow-xl shadow-black/10;
+  }
+  .eyebrow {
+    @apply text-[11px] font-bold uppercase tracking-[0.18em] text-blue-400;
+  }
+  .map-frame {
+    @apply overflow-hidden rounded-3xl border border-white/10 bg-[#121418] shadow-2xl shadow-black/30;
+  }
+}
+
+/* Mapbox popups live outside React's component tree, so their shared visual
+   treatment belongs here rather than in an individual screen. */
+.teleport-map-popup .mapboxgl-popup-content {
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  background: rgba(18, 19, 24, 0.96);
+  color: #f8fafc;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  user-select: none;
+}
+
+.teleport-map-popup-card {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 13px;
+}
+
+.teleport-map-popup-indicator {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 9999px;
+  background: #60a5fa;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.16);
+}
+
+.teleport-map-popup-label {
+  overflow: hidden;
+  color: #f8fafc;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.25rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.teleport-map-popup.mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip,
+.teleport-map-popup.mapboxgl-popup-anchor-bottom-left .mapboxgl-popup-tip,
+.teleport-map-popup.mapboxgl-popup-anchor-bottom-right .mapboxgl-popup-tip {
+  border-top-color: rgba(18, 19, 24, 0.96);
+}
+
+.teleport-map-popup.mapboxgl-popup-anchor-top .mapboxgl-popup-tip,
+.teleport-map-popup.mapboxgl-popup-anchor-top-left .mapboxgl-popup-tip,
+.teleport-map-popup.mapboxgl-popup-anchor-top-right .mapboxgl-popup-tip {
+  border-bottom-color: rgba(18, 19, 24, 0.96);
+}
+
+.teleport-map-popup.mapboxgl-popup-anchor-left .mapboxgl-popup-tip {
+  border-right-color: rgba(18, 19, 24, 0.96);
+}
+
+.teleport-map-popup.mapboxgl-popup-anchor-right .mapboxgl-popup-tip {
+  border-left-color: rgba(18, 19, 24, 0.96);
 }

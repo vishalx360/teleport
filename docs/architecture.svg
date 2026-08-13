@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">Teleport platform architecture</title>
+  <desc id="desc">Customer and driver clients communicate with a Next.js and tRPC application backed by PostgreSQL. A transactional outbox relays committed matching requests to Kafka, which starts durable Temporal workflows. Activities use Redis for geospatial driver discovery and Soketi or Pusher for live notifications. Stripe sends signed payment webhooks to the application.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0b1020"/><stop offset="1" stop-color="#111827"/></linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#2563eb"/><stop offset="1" stop-color="#60a5fa"/></linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#020617" flood-opacity=".45"/></filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 10 5 0 10z" fill="#60a5fa"/></marker>
+    <marker id="arrowMuted" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 10 5 0 10z" fill="#94a3b8"/></marker>
+    <style>
+      .title{font:700 34px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#f8fafc}.subtitle{font:400 16px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#94a3b8}.lane{font:700 12px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:2px;fill:#60a5fa}.h{font:700 18px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#f8fafc}.p{font:400 13px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#a8b3c7}.tag{font:600 11px system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#bfdbfe}.edge{fill:none;stroke:#60a5fa;stroke-width:2.5;marker-end:url(#arrow)}.edge2{fill:none;stroke:#94a3b8;stroke-width:2;stroke-dasharray:7 7;marker-end:url(#arrowMuted)}.box{fill:#151c2d;stroke:#334155;stroke-width:1.5}.core{fill:#172554;stroke:#3b82f6;stroke-width:2}.pill{fill:#1e3a5f}.note{fill:#0f172a;stroke:#334155;stroke-width:1}
+    </style>
+  </defs>
+  <rect width="1440" height="900" rx="28" fill="url(#bg)"/>
+  <text x="64" y="66" class="title">Teleport platform architecture</text>
+  <text x="64" y="94" class="subtitle">Durable orchestration around a PostgreSQL source of truth</text>
+
+  <text x="64" y="145" class="lane">EXPERIENCE</text>
+  <g filter="url(#shadow)"><rect x="64" y="165" width="280" height="126" rx="18" class="box"/><rect x="368" y="165" width="280" height="126" rx="18" class="box"/></g>
+  <circle cx="102" cy="205" r="17" fill="#1d4ed8"/><path d="M95 205h14M102 198v14" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+  <text x="130" y="211" class="h">Customer workspace</text><text x="88" y="244" class="p">Book · pay · track · chat</text><text x="88" y="266" class="p">Map-first responsive experience</text>
+  <circle cx="406" cy="205" r="17" fill="#1d4ed8"/><path d="M397 211l9-12 9 12M402 211v5h8v-5" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+  <text x="434" y="211" class="h">Driver workspace</text><text x="392" y="244" class="p">Availability · offers · fulfillment</text><text x="392" y="266" class="p">Live location and delivery controls</text>
+
+  <text x="738" y="145" class="lane">APPLICATION CONTROL PLANE</text>
+  <g filter="url(#shadow)"><rect x="738" y="165" width="638" height="126" rx="18" class="core"/></g>
+  <text x="770" y="207" class="h">Next.js 14 application + tRPC API</text><text x="770" y="236" class="p">NextAuth · Zod validation · React Query · Mapbox · role-aware UI</text>
+  <rect x="770" y="253" width="150" height="24" rx="12" class="pill"/><text x="787" y="269" class="tag">Command boundary</text><rect x="931" y="253" width="156" height="24" rx="12" class="pill"/><text x="948" y="269" class="tag">Optimistic versioning</text><rect x="1098" y="253" width="208" height="24" rx="12" class="pill"/><text x="1115" y="269" class="tag">Idempotent external events</text>
+
+  <path d="M344 228H738" class="edge"/><path d="M648 228H738" class="edge"/>
+
+  <text x="64" y="359" class="lane">DURABLE DATA + EVENT BACKBONE</text>
+  <g filter="url(#shadow)"><rect x="64" y="379" width="410" height="156" rx="18" class="core"/><rect x="514" y="379" width="410" height="156" rx="18" class="box"/><rect x="964" y="379" width="412" height="156" rx="18" class="box"/></g>
+  <text x="96" y="420" class="h">PostgreSQL</text><text x="96" y="449" class="p">Bookings · users · addresses · chat</text><text x="96" y="474" class="p">State audit log · deduplication records</text><text x="96" y="499" class="p">Transactional OutboxEvent rows</text>
+  <text x="546" y="420" class="h">Outbox relay</text><text x="546" y="449" class="p">Claims batches with SKIP LOCKED</text><text x="546" y="474" class="p">Publishes only committed facts</text><text x="546" y="499" class="p">Retry with bounded backoff</text>
+  <text x="996" y="420" class="h">Kafka · BOOKINGS</text><text x="996" y="449" class="p">Replayable integration boundary</text><text x="996" y="474" class="p">booking.matching_requested.v1</text><text x="996" y="499" class="p">Explicit offsets + consumer group</text>
+  <path d="M1057 291V330H269V379" class="edge"/><path d="M474 457H514" class="edge"/><path d="M924 457H964" class="edge"/>
+
+  <text x="64" y="604" class="lane">ORCHESTRATION + EPHEMERAL COORDINATION</text>
+  <g filter="url(#shadow)"><rect x="64" y="624" width="410" height="166" rx="18" class="core"/><rect x="514" y="624" width="410" height="166" rx="18" class="box"/><rect x="964" y="624" width="412" height="166" rx="18" class="box"/></g>
+  <text x="96" y="665" class="h">Temporal</text><text x="96" y="694" class="p">One deterministic workflow per attempt</text><text x="96" y="719" class="p">Driver offer timers · retries · Signals</text><text x="96" y="744" class="p">Singleton timeout reconciliation workflow</text>
+  <text x="546" y="665" class="h">Redis</text><text x="546" y="694" class="p">GEO driver lookup by vehicle class</text><text x="546" y="719" class="p">Availability, busy locks, expiring offers</text><text x="546" y="744" class="p">Fast coordination—not authoritative state</text>
+  <text x="996" y="665" class="h">Soketi / Pusher</text><text x="996" y="694" class="p">Private booking and driver channels</text><text x="996" y="719" class="p">Best-effort notifications trigger refetches</text><text x="996" y="744" class="p">Duplicates or loss cannot corrupt state</text>
+  <path d="M1170 535V578H269V624" class="edge"/><path d="M474 707H514" class="edge"/><path d="M924 707H964" class="edge"/><path d="M1170 624V574H1328V291" class="edge2"/>
+
+  <g><rect x="64" y="825" width="1312" height="42" rx="12" class="note"/><text x="82" y="851" class="p">Stripe Checkout → signed webhook → atomic payment transition + outbox write. PostgreSQL remains authoritative; Kafka, Temporal, Redis, and realtime delivery are independently retryable.</text></g>
+</svg>

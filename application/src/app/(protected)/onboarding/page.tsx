@@ -136,7 +136,7 @@ const UserRoleSelection = ({ updateSession }: {
 
 
 // Vehicle Selection Component
-export const VehicleSelection = (
+const VehicleSelection = (
     {
         selectedVehicleClass,
         setSelectedVehicleClass

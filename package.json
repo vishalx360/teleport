@@ -1,0 +1,21 @@
+{
+  "name": "teleport-local-tools",
+  "private": true,
+  "packageManager": "pnpm@9.12.1",
+  "engines": {
+    "node": ">=20.19 <21 || >=22.12 <23 || >=24 <25"
+  },
+  "scripts": {
+    "setup:local": "node scripts/setup-local.mjs",
+    "dev": "node scripts/dev.mjs",
+    "dev:web": "node scripts/dev.mjs --web",
+    "dev:worker": "node scripts/dev.mjs --worker",
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "infra:reset": "docker compose down -v --remove-orphans",
+    "status": "node scripts/status.mjs",
+    "test:state-machine": "application/node_modules/.bin/tsx --test shared/bookingStateMachine.test.ts",
+    "test:state-machine:integration": "cd application && SKIP_ENV_VALIDATION=1 DATABASE_URL='postgresql://user:password@localhost:5432/mydatabase' ./node_modules/.bin/tsx --test src/server/services/bookingTransitions.integration.test.ts",
+    "test:matchmaking": "cd matchmaker && ./node_modules/.bin/tsx scripts/smoke-local.ts"
+  }
+}

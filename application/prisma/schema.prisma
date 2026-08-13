@@ -2,136 +2,283 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-    provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
-    provider = "postgresql"
-    url      = env("DATABASE_URL")
+  provider = "postgresql"
 }
 
 enum BookingStatus {
-    BOOKED // user has requested a booking
-    ACCEPTED // driver has accepted the booking
-    ARRIVED // driver has arrived at pickup location
-    PICKED_UP // driver has picked up the package
-    IN_TRANSIT // driver is on the way to delivery location
-    DELIVERED // driver has delivered the package
-    CANCELLED // booking was cancelled by user
-    FAILED // booking failed for some reason
+  BOOKED // user has requested a booking
+  ACCEPTED // driver has accepted the booking
+  ARRIVED // driver has arrived at pickup location
+  PICKED_UP // driver has picked up the package
+  IN_TRANSIT // driver is on the way to delivery location
+  DELIVERED // driver has delivered the package
+  CANCELLED // booking was cancelled by user
+  FAILED // booking failed for some reason
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  AUTHORIZED
+  PAID
+  FAILED
+  REFUND_PENDING
+  REFUNDED
+}
+
+enum DispatchStatus {
+  NOT_STARTED
+  SEARCHING
+  ASSIGNED
+  NO_DRIVER_FOUND
+  CANCELLED
+}
+
+enum FulfillmentStatus {
+  NOT_STARTED
+  DRIVER_ARRIVING
+  AT_PICKUP
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+
+enum BookingStateAxis {
+  PAYMENT
+  DISPATCH
+  FULFILLMENT
+}
+
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  PUBLISHED
+  FAILED
 }
 
 model Booking {
-    id String @id @default(cuid())
+  id String @id @default(cuid())
 
-    user   User   @relation("userBooking", fields: [userId], references: [id])
-    userId String
+  user   User   @relation("userBooking", fields: [userId], references: [id])
+  userId String
 
-    driver   User?   @relation("driverBooking", fields: [driverId], references: [id])
-    driverId String?
+  driver   User?   @relation("driverBooking", fields: [driverId], references: [id])
+  driverId String?
 
-    status BookingStatus @default(BOOKED)
+  status BookingStatus @default(BOOKED)
 
-    vehicleClass VehicleClass
+  vehicleClass VehicleClass
 
-    pickupAddress   Address @relation("pickupAddress", fields: [pickupAddressId], references: [id])
-    pickupAddressId String
+  pickupAddress   Address @relation("pickupAddress", fields: [pickupAddressId], references: [id])
+  pickupAddressId String
 
-    deliveryAddress   Address @relation("deliveryAddress", fields: [deliveryAddressId], references: [id])
-    deliveryAddressId String
+  deliveryAddress   Address @relation("deliveryAddress", fields: [deliveryAddressId], references: [id])
+  deliveryAddressId String
 
-    distance Float
-    duration Float
-    price    Float
+  distanceMeters          Int
+  durationSeconds         Int
+  subtotalAmount          Int
+  discountAmount          Int               @default(0)
+  totalAmount             Int
+  currency                String            @default("INR") @db.VarChar(3)
+  paymentStatus           PaymentStatus     @default(PENDING)
+  dispatchStatus          DispatchStatus    @default(NOT_STARTED)
+  fulfillmentStatus       FulfillmentStatus @default(NOT_STARTED)
+  stateVersion            Int               @default(0)
+  stateChangedAt          DateTime          @default(now())
+  matchingAttempt         Int               @default(0)
+  temporalWorkflowId      String?           @unique
+  stripeCheckoutSessionId String?           @unique
+  stripePaymentIntentId   String?           @unique
+  failureCode             String?
+  cancellationReason      String?
+  acceptedAt              DateTime?
+  arrivedAt               DateTime?
+  pickedUpAt              DateTime?
+  inTransitAt             DateTime?
+  deliveredAt             DateTime?
+  cancelledAt             DateTime?
+  failedAt                DateTime?
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  events      BookingEvent[]
+  stateEvents BookingStateEvent[]
+  messages    BookingMessage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([dispatchStatus, createdAt])
+  @@index([fulfillmentStatus, createdAt])
+  @@index([driverId, status])
+  @@index([userId, createdAt])
+}
+
+model BookingMessage {
+  id        String   @id @default(cuid())
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId String
+  sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  senderId  String
+  body      String   @db.VarChar(1000)
+  createdAt DateTime @default(now())
+
+  @@index([bookingId, createdAt, id])
+}
+
+model BookingStateEvent {
+  id        String           @id @default(cuid())
+  booking   Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId String
+  commandId String
+  command   String
+  axis      BookingStateAxis
+  fromState String
+  toState   String
+  version   Int
+  actorId   String?
+  reason    String?
+  metadata  Json?
+  createdAt DateTime         @default(now())
+
+  @@unique([bookingId, commandId, axis])
+  @@unique([bookingId, version, axis])
+  @@index([bookingId, createdAt])
+}
+
+model ProcessedExternalEvent {
+  id          String   @id @default(cuid())
+  provider    String
+  externalId  String
+  eventType   String
+  processedAt DateTime @default(now())
+
+  @@unique([provider, externalId])
+  @@index([provider, processedAt])
+}
+
+model BookingEvent {
+  id         String         @id @default(cuid())
+  booking    Booking        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bookingId  String
+  fromStatus BookingStatus?
+  toStatus   BookingStatus
+  actorId    String?
+  reason     String?
+  metadata   Json?
+  createdAt  DateTime       @default(now())
+
+  @@index([bookingId, createdAt])
+}
+
+model OutboxEvent {
+  id          String       @id @default(cuid())
+  topic       String
+  eventType   String
+  key         String
+  payload     Json
+  status      OutboxStatus @default(PENDING)
+  attempts    Int          @default(0)
+  availableAt DateTime     @default(now())
+  lockedAt    DateTime?
+  publishedAt DateTime?
+  lastError   String?
+  createdAt   DateTime     @default(now())
+
+  @@index([status, availableAt, createdAt])
 }
 
 model Address {
-    id          String @id @default(cuid())
-    address     String
-    nickname    String
-    contactName String
-    mobile      String
-    latitude    Float
-    longitude   Float
+  id          String @id @default(cuid())
+  address     String
+  nickname    String
+  contactName String
+  mobile      String
+  latitude    Float
+  longitude   Float
 
-    user   User   @relation(fields: [userId], references: [id])
-    userId String
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
 
-    pickupBookings  Booking[] @relation("pickupAddress")
-    dropoffBookings Booking[] @relation("deliveryAddress")
+  pickupBookings  Booking[] @relation("pickupAddress")
+  dropoffBookings Booking[] @relation("deliveryAddress")
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // Necessary for Next auth -----------------------------------------------
 model Account {
-    id                       String  @id @default(cuid())
-    userId                   String
-    type                     String
-    provider                 String
-    providerAccountId        String
-    refresh_token            String? // @db.Text
-    access_token             String? // @db.Text
-    expires_at               Int?
-    token_type               String?
-    scope                    String?
-    id_token                 String? // @db.Text
-    session_state            String?
-    user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-    refresh_token_expires_in Int?
+  id                       String  @id @default(cuid())
+  userId                   String
+  type                     String
+  provider                 String
+  providerAccountId        String
+  refresh_token            String? // @db.Text
+  access_token             String? // @db.Text
+  expires_at               Int?
+  token_type               String?
+  scope                    String?
+  id_token                 String? // @db.Text
+  session_state            String?
+  user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refresh_token_expires_in Int?
 
-    @@unique([provider, providerAccountId])
+  @@unique([provider, providerAccountId])
 }
 
 model Session {
-    id           String   @id @default(cuid())
-    sessionToken String   @unique
-    userId       String
-    expires      DateTime
-    user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum VehicleClass {
-    BIKE
-    PICKUP_TRUCK
-    TRUCK
+  BIKE
+  PICKUP_TRUCK
+  TRUCK
 }
 
 enum UserRoles {
-    USER
-    DRIVER
-    ADMIN
+  USER
+  DRIVER
+  ADMIN
 }
 
 model User {
-    id            String    @id @default(cuid())
-    name          String?
-    email         String?   @unique
-    emailVerified DateTime?
-    image         String?
-    accounts      Account[]
-    sessions      Session[]
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
 
-    role UserRoles?
+  role UserRoles?
 
-    addresses Address[]
+  addresses Address[]
 
-    userBookings   Booking[] @relation("userBooking")
-    driverBookings Booking[] @relation("driverBooking")
+  userBookings   Booking[]        @relation("userBooking")
+  driverBookings Booking[]        @relation("driverBooking")
+  sentMessages   BookingMessage[]
 
-    vehicleClass VehicleClass?
+  vehicleClass VehicleClass?
 
-    createdAt DateTime @default(now())
+  createdAt DateTime @default(now())
 }
 
 model VerificationToken {
-    identifier String
-    token      String   @unique
-    expires    DateTime
+  identifier String
+  token      String   @unique
+  expires    DateTime
 
-    @@unique([identifier, token])
+  @@unique([identifier, token])
 }

@@ -13,26 +13,10 @@ import { ZodError } from "zod";
 
 import { getServerAuthSession } from "@/server/auth";
 
-import { produceMessage } from "@/lib/produceMessage";
 import { db } from "@/lib/db";
 import { redisClient } from "@/lib/redisClient";
 import { pusherServer } from "@/lib/pusherServer";
 
-export type UserNotification = {
-  message: string;
-  type: "success" | "error";
-};
-
-// notify message to the client
-async function notify({
-  channel,
-  notification,
-}: {
-  channel: string;
-  notification: UserNotification;
-}) {
-  return await pusherServer.trigger(channel, "notification", notification);
-}
 /**
  * 1. CONTEXT
  *
@@ -52,8 +36,6 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
     db,
     redis: redisClient,
     pusher: pusherServer,
-    produceMessage,
-    notify,
     session,
     ...opts,
   };
@@ -154,3 +136,15 @@ export const protectedProcedure = t.procedure
       },
     });
   });
+
+const requireRole = (role: "USER" | "DRIVER" | "ADMIN") =>
+  protectedProcedure.use(({ ctx, next }) => {
+    if (ctx.session.user.role !== role) {
+      throw new TRPCError({ code: "FORBIDDEN", message: `${role} access required` });
+    }
+    return next();
+  });
+
+export const customerProcedure = requireRole("USER");
+export const driverProcedure = requireRole("DRIVER");
+export const adminProcedure = requireRole("ADMIN");

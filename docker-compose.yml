@@ -12,7 +12,7 @@ services:
 
   # PostgreSQL service
   postgres:
-    image: postgres:latest
+    image: postgres:16
     container_name: postgres
     environment:
       POSTGRES_USER: user
@@ -30,44 +30,66 @@ services:
     image: quay.io/soketi/soketi:1.4-16-debian
     container_name: soketi
     ports:
-      - "6001:6001" # WebSocket server
-      - "9601:9601" # Management API
+      - "127.0.0.1:6001:6001" # WebSocket server (local development only)
+      - "127.0.0.1:9601:9601" # Management API (never expose publicly)
     environment:
       PORT: 6001
       DEBUG: "*"
       SOKETI_DEFAULT_APP_USER_AUTHENTICATION: true
+      SOKETI_DEFAULT_APP_ID: local-teleport
+      SOKETI_DEFAULT_APP_KEY: local-teleport-key
+      SOKETI_DEFAULT_APP_SECRET: local-teleport-secret
     networks:
       - app-network
 
-  # Zookeeper service
-  zookeeper:
-    container_name: zookeeper
-    image: confluentinc/cp-zookeeper:7.4.4
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "22181:2181"
-    volumes:
-      - ./volumes/zookeeper:/var/lib/zookeeper
-    networks:
-      - app-network
-
-  # Kafka service
+  # Single-node KRaft Kafka for local development. Production should use a
+  # managed or separately operated Kafka cluster.
   kafka:
     container_name: kafka
     image: confluentinc/cp-kafka:7.4.4
-    depends_on:
-      - zookeeper
     ports:
       - "29092:29092"
     environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:29093"
+      KAFKA_LISTENERS: "PLAINTEXT://kafka:9092,CONTROLLER://kafka:29093,PLAINTEXT_HOST://0.0.0.0:29092"
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    networks:
+      - app-network
+
+  temporal:
+    image: temporalio/auto-setup:1.29.6
+    container_name: temporal
+    depends_on:
+      - postgres
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_SEEDS: postgres
+      POSTGRES_USER: user
+      POSTGRES_PWD: password
+    ports:
+      - "7233:7233"
+    networks:
+      - app-network
+
+  temporal-ui:
+    image: temporalio/ui:2.34.0
+    container_name: temporal-ui
+    depends_on:
+      - temporal
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+    ports:
+      - "8080:8080"
     networks:
       - app-network
 

@@ -11,11 +11,17 @@ interface DistanceAndDuration {
   duration: number;
 }
 
+function fallbackRoute(start: Coordinates, end: Coordinates): DistanceAndDuration {
+  const distanceKm = getDistanceFromLatLonInMeters(start.latitude, start.longitude, end.latitude, end.longitude) / 1_000;
+  return { distance: distanceKm.toFixed(2), duration: Math.max(1, Math.ceil((distanceKm / 25) * 60)) };
+}
+
 export const getDistanceAndDuration = async (
   start: Coordinates,
   end: Coordinates,
 ): Promise<DistanceAndDuration> => {
   const mapboxAccessToken = env.NEXT_PUBLIC_MAPBOX_TOKEN; // Your Mapbox access token
+  if (!mapboxAccessToken) return fallbackRoute(start, end);
   const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${start.longitude},${start.latitude};${end.longitude},${end.latitude}?access_token=${mapboxAccessToken}`;
 
   try {
@@ -24,7 +30,7 @@ export const getDistanceAndDuration = async (
 
     if (!data) {
       console.log("No routes data found");
-      return null
+      return fallbackRoute(start, end);
     }
     const distanceInKm = (data.distance / 1000).toFixed(2); // Convert to kilometers
     const durationInMinutes = Math.floor(data.duration / 60); // Convert to minutes
@@ -35,11 +41,11 @@ export const getDistanceAndDuration = async (
     };
   } catch (error) {
     console.error("Error fetching distance:", error);
-    throw error;
+    return fallbackRoute(start, end);
   }
 };
 
-export const getDistanceFromLatLonInMeters = (lat1, lon1, lat2, lon2) => {
+export const getDistanceFromLatLonInMeters = (lat1: number, lon1: number, lat2: number, lon2: number) => {
   const R = 6371000; // Radius of the Earth in meters
   const dLat = (lat2 - lat1) * (Math.PI / 180);
   const dLon = (lon2 - lon1) * (Math.PI / 180);

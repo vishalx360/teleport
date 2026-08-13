@@ -3,15 +3,29 @@ import {
   bookingLocationSchema,
   locationSchema,
 } from "@/components/validationSchema";
-import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import { createTRPCRouter, driverProcedure } from "@/server/api/trpc";
 import { z } from "zod";
-import { BookingStatus } from "@prisma/client";
+import { BookingStatus } from "@/generated/prisma/enums";
 import { getDistanceAndDuration } from "@/lib/geoUtils";
+import { getTemporalClient } from "@/lib/temporal";
+import { TRPCError } from "@trpc/server";
+import {
+  applyBookingCommand,
+  BookingStateConflictError,
+  InvalidBookingTransitionError,
+} from "@/server/services/bookingTransitions";
+import { randomUUID } from "node:crypto";
 
 export const driverRouter = createTRPCRouter({
-  setAvailablity: protectedProcedure
+  setAvailablity: driverProcedure
     .input(availablitySchema)
     .mutation(async ({ ctx, input }) => {
+      if (!ctx.session.user.vehicleClass) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Choose a vehicle before going online",
+        });
+      }
       if (!input.available) {
         await ctx.redis.del(`DRIVER_AVAILABILITY:${ctx.session.user.id}`);
         await ctx.redis.zrem(
@@ -32,63 +46,84 @@ export const driverRouter = createTRPCRouter({
       return { message: "Updated Availablity successfully", available: true };
     }),
 
-  updateLocation: protectedProcedure
+  updateLocation: driverProcedure
     .input(bookingLocationSchema)
     .mutation(async ({ ctx, input }) => {
-      console.log(input);
       await ctx.redis.geoadd(
         `DRIVER_LOCATIONS:${ctx.session.user.vehicleClass}`,
         input.longitude,
         input.latitude,
         ctx.session.user.id,
       );
+      // A location update proves an online driver is still alive, without
+      // extending availability for a driver who has explicitly gone offline.
+      if (await ctx.redis.get(`DRIVER_AVAILABILITY:${ctx.session.user.id}`)) {
+        await ctx.redis.expire(
+          `DRIVER_AVAILABILITY:${ctx.session.user.id}`,
+          30 * 60,
+        );
+      }
       if (input.bookingId) {
+        const assignedBooking = await ctx.db.booking.findFirst({
+          where: {
+            id: input.bookingId,
+            driverId: ctx.session.user.id,
+            status: {
+              in: [
+                BookingStatus.ACCEPTED,
+                BookingStatus.ARRIVED,
+                BookingStatus.PICKED_UP,
+                BookingStatus.IN_TRANSIT,
+              ],
+            },
+          },
+          select: {
+            pickupAddress: {
+              select: { latitude: true, longitude: true },
+            },
+            deliveryAddress: {
+              select: { latitude: true, longitude: true },
+            },
+            status: true,
+          },
+        });
+        if (!assignedBooking) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "This delivery is not assigned to you",
+          });
+        }
         const channelName = `private-booking-${input.bookingId}`;
         await ctx.pusher.trigger(channelName, "DRIVER_LOCATION", {
           longitude: input.longitude,
           latitude: input.latitude,
         });
-        const booking = await ctx.db.booking.findUnique({
-          where: { id: input.bookingId },
-          select: {
-            pickupAddress: {
-              select: {
-                latitude: true,
-                longitude: true
-              }
-            },
-            deliveryAddress: {
-              select: {
-                latitude: true,
-                longitude: true
-              },
-            },
-            status: true
-          }
-        });
-        if (!booking) {
-          return { message: "Updated Location successfully" };
-        }
         const pickupCoordinates = {
-          latitude: booking.pickupAddress.latitude,
-          longitude: booking.pickupAddress.longitude
-        }
+          latitude: assignedBooking.pickupAddress.latitude,
+          longitude: assignedBooking.pickupAddress.longitude,
+        };
         const deliveryCoordinates = {
-          latitude: booking.deliveryAddress.latitude,
-          longitude: booking.deliveryAddress.longitude
-        }
+          latitude: assignedBooking.deliveryAddress.latitude,
+          longitude: assignedBooking.deliveryAddress.longitude,
+        };
         const driverCoordinates = {
           latitude: input.latitude,
-          longitude: input.longitude
-        }
-        switch (booking?.status) {
+          longitude: input.longitude,
+        };
+        switch (assignedBooking.status) {
           case BookingStatus.ACCEPTED:
-            const etaToPickup = await getDistanceAndDuration(pickupCoordinates, driverCoordinates);
+            const etaToPickup = await getDistanceAndDuration(
+              pickupCoordinates,
+              driverCoordinates,
+            );
             await ctx.pusher.trigger(channelName, "ETA_UPDATE", etaToPickup);
             break;
           case BookingStatus.PICKED_UP:
           case BookingStatus.IN_TRANSIT:
-            const etaToDelivery = await getDistanceAndDuration(driverCoordinates, deliveryCoordinates);
+            const etaToDelivery = await getDistanceAndDuration(
+              driverCoordinates,
+              deliveryCoordinates,
+            );
             await ctx.pusher.trigger(channelName, "ETA_UPDATE", etaToDelivery);
             break;
         }
@@ -96,59 +131,129 @@ export const driverRouter = createTRPCRouter({
       return { message: "Updated Location successfully" };
     }),
 
-  getAvailablity: protectedProcedure.query(async ({ ctx }) => {
+  getAvailablity: driverProcedure.query(async ({ ctx }) => {
     const available = await ctx.redis.get(
       `DRIVER_AVAILABILITY:${ctx.session.user.id}`,
     );
     return { available: available === "true" };
   }),
 
-  bookingResponse: protectedProcedure
+  bookingResponse: driverProcedure
     .input(
       z.object({
         bookingId: z.string(),
         accepted: z.boolean(),
-        channel: z.string(),
+        responseToken: z.string().uuid(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { bookingId, accepted, channel } = input;
-      if (accepted) {
-        await ctx.db.booking.update({
-          where: { id: bookingId },
-          data: {
-            status: BookingStatus.ACCEPTED,
-            driverId: ctx.session.user.id,
-          },
-        });
-        // stop the matching process
-        await ctx.pusher.trigger(bookingId, "UPDATE", {
-          message: accepted ? "Booking accepted" : "Booking rejected",
+      const { bookingId, accepted } = input;
+      const rawOffer = await ctx.redis.get(`MATCHING_OFFER:${bookingId}`);
+      if (!rawOffer) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "This offer has expired",
         });
       }
-      // stop the matching process for this driver
-      await ctx.redis.set(
-        `DRIVER_REJECTED:${ctx.session.user.id}:${bookingId}`,
-        "true",
-        "EX",
-        5 * 60,
+      const offer = z
+        .object({ driverId: z.string(), responseToken: z.string().uuid() })
+        .safeParse(JSON.parse(rawOffer));
+      if (
+        !offer.success ||
+        offer.data.driverId !== ctx.session.user.id ||
+        offer.data.responseToken !== input.responseToken
+      ) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "This offer is not assigned to you",
+        });
+      }
+
+      const temporal = await getTemporalClient();
+      const booking = await ctx.db.booking.findUnique({
+        where: { id: bookingId },
+        select: { matchingAttempt: true },
+      });
+      if (!booking)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Booking not found",
+        });
+      const workflow = temporal.workflow.getHandle(
+        `booking-match-${bookingId}-${booking.matchingAttempt}`,
       );
-      await ctx.redis.set(
-        channel,
-        accepted ? "accepted" : "rejected",
-        "EX",
-        5 * 60,
-      );
+      await workflow.signal("driverResponse", {
+        driverId: ctx.session.user.id,
+        accepted,
+        responseToken: input.responseToken,
+      });
 
       return { message: "Response sent" };
     }),
-  getCurrentBooking: protectedProcedure.query(async ({ ctx }) => {
+  advanceBooking: driverProcedure
+    .input(
+      z.object({
+        bookingId: z.string(),
+        commandId: z
+          .string()
+          .uuid()
+          .default(() => randomUUID()),
+        toStatus: z.enum(["ARRIVED", "PICKED_UP", "IN_TRANSIT", "DELIVERED"]),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const commands = {
+        ARRIVED: "DRIVER_ARRIVED",
+        PICKED_UP: "PARCEL_PICKED_UP",
+        IN_TRANSIT: "DELIVERY_STARTED",
+        DELIVERED: "DELIVERY_COMPLETED",
+      } as const;
+      try {
+        await ctx.db.$transaction(async (tx) => {
+          const assigned = await tx.booking.count({
+            where: { id: input.bookingId, driverId: ctx.session.user.id },
+          });
+          if (assigned !== 1)
+            throw new TRPCError({
+              code: "FORBIDDEN",
+              message: "This delivery is not assigned to you",
+            });
+          await applyBookingCommand(tx, {
+            bookingId: input.bookingId,
+            commandId: input.commandId,
+            command: commands[input.toStatus],
+            actorId: ctx.session.user.id,
+          });
+        });
+      } catch (error) {
+        if (
+          error instanceof InvalidBookingTransitionError ||
+          error instanceof BookingStateConflictError
+        ) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Booking cannot make this transition",
+          });
+        }
+        throw error;
+      }
+      await ctx.pusher.trigger(`private-booking-${input.bookingId}`, "UPDATE", {
+        message: `Booking ${input.toStatus.toLowerCase()}`,
+      });
+      return { message: "Booking updated" };
+    }),
+  getCurrentBooking: driverProcedure.query(async ({ ctx }) => {
     const booking = await ctx.db.booking.findFirst({
       where: {
         driverId: ctx.session.user.id,
         status: {
-          in: [BookingStatus.ACCEPTED, BookingStatus.PICKED_UP, BookingStatus.IN_TRANSIT],
-        }
+          in: [
+            BookingStatus.ACCEPTED,
+            BookingStatus.ARRIVED,
+            BookingStatus.PICKED_UP,
+            BookingStatus.IN_TRANSIT,
+          ],
+        },
       },
       include: {
         pickupAddress: true,
@@ -160,7 +265,11 @@ export const driverRouter = createTRPCRouter({
     if (!booking) {
       return null;
     }
-    const returnData = {
+    const returnData: {
+      booking: typeof booking;
+      lastEta: Awaited<ReturnType<typeof getDistanceAndDuration>> | null;
+      lastUpdatedDriverLocation: { longitude: number; latitude: number } | null;
+    } = {
       booking,
       lastEta: null,
       lastUpdatedDriverLocation: null,
@@ -168,31 +277,38 @@ export const driverRouter = createTRPCRouter({
 
     const [lastUpdatedDriverLocation] = await ctx.redis.geopos(
       `DRIVER_LOCATIONS:${booking.vehicleClass}`,
-      booking.driverId,
+      ctx.session.user.id,
     );
+    if (!lastUpdatedDriverLocation) return returnData;
     const driverCoordinates = {
-      longitude: lastUpdatedDriverLocation[0],
-      latitude: lastUpdatedDriverLocation[1]
-    }
-    returnData.lastUpdatedDriverLocation = driverCoordinates
+      longitude: Number(lastUpdatedDriverLocation[0]),
+      latitude: Number(lastUpdatedDriverLocation[1]),
+    };
+    returnData.lastUpdatedDriverLocation = driverCoordinates;
 
     const pickupCoordinates = {
       latitude: booking.pickupAddress.latitude,
-      longitude: booking.pickupAddress.longitude
-    }
+      longitude: booking.pickupAddress.longitude,
+    };
     const deliveryCoordinates = {
       latitude: booking.deliveryAddress.latitude,
-      longitude: booking.deliveryAddress.longitude
-    }
+      longitude: booking.deliveryAddress.longitude,
+    };
     switch (booking?.status) {
       case BookingStatus.ACCEPTED:
-        const etaToPickup = await getDistanceAndDuration(pickupCoordinates, driverCoordinates);
+        const etaToPickup = await getDistanceAndDuration(
+          pickupCoordinates,
+          driverCoordinates,
+        );
         returnData.lastEta = etaToPickup;
         break;
       case BookingStatus.PICKED_UP:
       case BookingStatus.IN_TRANSIT:
-        const etaToDelivery = await getDistanceAndDuration(driverCoordinates, deliveryCoordinates);
-        returnData.lastEta = etaToDelivery
+        const etaToDelivery = await getDistanceAndDuration(
+          driverCoordinates,
+          deliveryCoordinates,
+        );
+        returnData.lastEta = etaToDelivery;
         break;
     }
 

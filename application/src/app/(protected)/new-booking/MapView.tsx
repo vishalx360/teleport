@@ -1,40 +1,46 @@
-import '@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css';
-import { Address } from "@prisma/client";
-import 'mapbox-gl/dist/mapbox-gl.css';
-import Map from "./Map";
+import DeliveryMap from "@/components/maps/DeliveryMap";
 
 export interface Coordinates {
-    latitude: number | null;
-    longitude: number | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
-const MapView = ({ pickupLocation, deliveryLocation,
-    driverLocation,
-    distance, duration, calculating
-}: {
-    pickupLocation: Address;
-    deliveryLocation: Address;
-    driverLocation: Coordinates
-    distance: number;
-    duration: number;
-    calculating: boolean;
-}) => {
+type MapAddress = { latitude: number; longitude: number };
 
-    return (
-        <div className="relative h-48 w-full rounded-lg overflow-hidden">
-            <Map
-                points={[
-                    { latitude: pickupLocation.latitude, longitude: pickupLocation.longitude, markerText: "Pickup", inview: true },
-                    { latitude: deliveryLocation.latitude, longitude: deliveryLocation.longitude, markerText: "Delivery", inview: true }
-                ]}
-                extraPoints={(driverLocation) ? [{ latitude: driverLocation.latitude, longitude: driverLocation.longitude, markerText: "Driver", inview: false }] : []}
-            />
-            <div className="absolute top-2 left-2 bg-white/20 backdrop-blur-lg px-2 py-1 rounded text-sm font-medium">
-                {
-                    calculating ? "Calculating..." : `${distance} km, ${duration} mins`
-                }
-            </div>
-        </div>
-    )
+const MapView = ({
+  pickupLocation,
+  deliveryLocation,
+  driverLocation,
+  distance,
+  duration,
+  calculating,
+}: {
+  pickupLocation: MapAddress;
+  deliveryLocation: MapAddress;
+  driverLocation?: Coordinates;
+  distance: number;
+  duration: number;
+  calculating?: boolean;
+}) => {
+  return (
+    <div className="map-frame relative h-56 w-full">
+      <DeliveryMap
+        pickup={pickupLocation}
+        dropoff={deliveryLocation}
+        driver={
+          driverLocation?.latitude != null && driverLocation.longitude != null
+            ? {
+                latitude: driverLocation.latitude,
+                longitude: driverLocation.longitude,
+              }
+            : null
+        }
+        includeDriverInBounds={false}
+      />
+      <div className="absolute left-3 top-3 rounded-xl border border-white/10 bg-[#15161a]/90 px-3 py-1.5 text-sm font-medium text-slate-100 shadow-lg backdrop-blur-lg">
+        {calculating ? "Calculating..." : `${distance} km, ${duration} mins`}
+      </div>
+    </div>
+  );
 };
 export default MapView;

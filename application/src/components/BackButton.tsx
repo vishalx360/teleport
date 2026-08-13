@@ -1,21 +1,47 @@
+"use client";
+
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Button } from "./ui/button";
+import { cn } from "@/lib/utils";
 
+export default function BackButton({
+  fallbackHref = "/",
+  className,
+}: {
+  fallbackHref?: string;
+  className?: string;
+}) {
+  const router = useRouter();
 
+  const goBack = () => {
+    let hasInAppReferrer = false;
+    try {
+      hasInAppReferrer =
+        Boolean(document.referrer) &&
+        new URL(document.referrer).origin === window.location.origin;
+    } catch {
+      hasInAppReferrer = false;
+    }
 
-const BackButton = () => {
-    const router = useRouter();
+    // Never send someone back to an external site or an empty browser tab.
+    if (hasInAppReferrer && window.history.length > 1) {
+      router.back();
+      return;
+    }
+    router.push(fallbackHref);
+  };
 
-    const goBack = () => {
-        router.back();
-    };
-    return (
-        <Button onClick={goBack} variant="ghost" className="w-10 h-10 p-0">
-            <ArrowLeft className="h-4 w-4" />
-            <span className="sr-only">Go back</span>
-        </Button>
-    );
-};
-
-export default BackButton;
+  return (
+    <button
+      type="button"
+      onClick={goBack}
+      aria-label="Go back"
+      className={cn(
+        "grid h-11 w-11 shrink-0 place-items-center rounded-full border border-white/15 bg-[#121318]/90 text-white shadow-xl backdrop-blur transition hover:border-white/25 hover:bg-[#202228] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400",
+        className,
+      )}
+    >
+      <ArrowLeft className="h-5 w-5" />
+    </button>
+  );
+}

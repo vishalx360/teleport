@@ -10,7 +10,7 @@ const rolePageMap = {
     "DRIVER": "/dashboard/driver"
 }
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function HomePage() {
     const session = await getServerSession(authOptions);
     if (!session) {
         return <LoginPage />;
