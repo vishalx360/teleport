@@ -2,6 +2,10 @@
 
 ### A real-time local delivery platform built around durable workflows and explicit state ownership.
 
+[![Deploy landing page with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvishalx360%2Fteleport&root-directory=application&project-name=teleport-landing)
+
+The public landing page can be deployed without backend credentials. The full booking platform still requires the infrastructure and environment configuration described below.
+
 Teleport is an open-source, full-stack delivery marketplace where customers can book and track a parcel while nearby drivers receive time-bound offers and manage fulfillment. The product is intentionally designed as a platform engineering project: the interesting work lives in the failure boundaries between payments, state transitions, event delivery, workflow retries, geo-discovery, and real-time UX.
 
 > **Project status:** active personal project and production-oriented reference implementation. It runs end to end locally with seeded customer and driver accounts; production deployment still requires managed infrastructure, secrets, observability, and operational runbooks.

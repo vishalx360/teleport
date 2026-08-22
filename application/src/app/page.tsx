@@ -4,6 +4,7 @@ import {
   ChevronRight,
   Clock3,
   CreditCard,
+  Github,
   History,
   MapPin,
   MessageCircle,
@@ -12,19 +13,18 @@ import {
   Route,
   Truck,
 } from "lucide-react";
-import { getServerSession } from "next-auth";
 import Image from "next/image";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 
 import { vehicles } from "@/lib/constants";
-import { authOptions } from "@/server/auth";
 
-const rolePageMap = {
-  ADMIN: "/dashboard/admin",
-  USER: "/dashboard/user",
-  DRIVER: "/dashboard/driver",
+const repositoryLink = {
+  href: "https://github.com/vishalx360/teleport",
+  target: "_blank",
+  rel: "noreferrer",
 } as const;
+
+export const dynamic = "force-static";
 
 function Brand() {
   return (
@@ -249,16 +249,16 @@ function LandingPage() {
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             <Link
-              href="/login"
+              {...repositoryLink}
               className="rounded-xl px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-white/5 sm:px-4"
             >
-              Log in
+              GitHub
             </Link>
             <Link
-              href="/login"
+              {...repositoryLink}
               className="hidden rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-slate-950 transition hover:bg-blue-50 sm:inline-flex"
             >
-              Send a parcel
+              View repository
             </Link>
           </div>
         </nav>
@@ -281,11 +281,11 @@ function LandingPage() {
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <Link
-                href="/login"
+                {...repositoryLink}
                 className="inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-blue-500 px-6 font-bold text-white shadow-lg shadow-blue-500/20 transition hover:bg-blue-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-400"
               >
-                Send a parcel
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                View on GitHub
+                <Github className="h-4 w-4" aria-hidden="true" />
               </Link>
               <Link
                 href="#drive"
@@ -424,8 +424,8 @@ function LandingPage() {
                     </p>
                   </div>
                   <Link
-                    href="/login"
-                    aria-label={`Book a ${vehicle.name} delivery`}
+                    {...repositoryLink}
+                    aria-label={`View the Teleport ${vehicle.name} implementation on GitHub`}
                     className="grid h-11 w-11 place-items-center rounded-full bg-slate-950 text-white transition hover:bg-blue-600"
                   >
                     <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -464,10 +464,10 @@ function LandingPage() {
               ))}
             </ul>
             <Link
-              href="/login"
+              {...repositoryLink}
               className="mt-9 inline-flex items-center gap-2 font-bold text-white transition hover:text-blue-300"
             >
-              Start a delivery
+              Explore the implementation
               <ChevronRight className="h-4 w-4" aria-hidden="true" />
             </Link>
           </div>
@@ -488,10 +488,10 @@ function LandingPage() {
               requests, and move assigned parcels through each delivery stage.
             </p>
             <Link
-              href="/login"
+              {...repositoryLink}
               className="mt-9 inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-white px-6 font-bold text-blue-700 transition hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
             >
-              Continue as a driver
+              View the driver flow
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
           </div>
@@ -548,18 +548,18 @@ function LandingPage() {
             <PackagePlus className="h-6 w-6" aria-hidden="true" />
           </span>
           <h2 className="mt-7 text-4xl font-semibold tracking-[-0.045em] sm:text-6xl">
-            Ready to send it?
+            See how Teleport is built.
           </h2>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
-            Sign in, choose your addresses and vehicle, then review the fare
-            before payment.
+            Explore the complete customer, driver, payment, matching, and
+            delivery workflow in the open-source repository.
           </p>
           <Link
-            href="/login"
+            {...repositoryLink}
             className="mt-8 inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-7 font-bold text-white transition hover:bg-blue-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600"
           >
-            Send a parcel
-            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            View GitHub repository
+            <Github className="h-4 w-4" aria-hidden="true" />
           </Link>
         </div>
       </section>
@@ -577,11 +577,8 @@ function LandingPage() {
             <Link href="#drive" className="transition hover:text-white">
               Drive
             </Link>
-            <Link href="/login" className="transition hover:text-white">
-              Log in
-            </Link>
-            <Link href="/login" className="transition hover:text-white">
-              Send a parcel
+            <Link {...repositoryLink} className="transition hover:text-white">
+              GitHub repository
             </Link>
           </nav>
           <p className="text-sm text-slate-600">
@@ -593,10 +590,6 @@ function LandingPage() {
   );
 }
 
-export default async function HomePage() {
-  const session = await getServerSession(authOptions);
-
-  if (!session) return <LandingPage />;
-  if (!session.user.role) redirect("/onboarding");
-  redirect(rolePageMap[session.user.role]);
+export default function HomePage() {
+  return <LandingPage />;
 }
