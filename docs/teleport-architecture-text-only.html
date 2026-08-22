@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Teleport — Text-only Architecture</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js" integrity="sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/" crossorigin="anonymous"></script>
+  <style>
+    *{box-sizing:border-box}body{margin:0;padding:32px;background:#f5f5f3;color:#171717;font-family:Inter,system-ui,sans-serif}.container{max-width:1500px;margin:auto;background:#fff;border:1px solid #e7e7e3;border-radius:20px;padding:32px;box-shadow:0 18px 60px rgba(20,20,20,.06)}header{display:flex;align-items:flex-start;margin-bottom:28px}.eyebrow{font:500 11px 'JetBrains Mono',monospace;letter-spacing:.14em;color:#777;text-transform:uppercase;margin-bottom:9px}h1{font-size:30px;line-height:1;margin:0 0 9px;letter-spacing:-.04em}.subtitle{margin:0;color:#737373;font-size:13px}.toolbar{margin-left:auto;display:flex;align-items:center;gap:8px}.toolbar-actions{display:none;gap:7px}.toolbar.expanded .toolbar-actions{display:flex}.toolbar button{border:1px solid #deded9;background:#fff;border-radius:7px;padding:7px 10px;font:500 11px Inter;color:#555;cursor:pointer}.toolbar-toggle{border:0!important;font-size:20px!important;color:#999!important}.diagram{border:1px solid #e8e8e4;border-radius:14px;overflow:auto;background:#fff}svg{display:block;width:100%;min-width:1050px}.notes{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid #e8e8e4;border-radius:12px;margin-top:16px;overflow:hidden}.note{padding:16px 18px;border-right:1px solid #e8e8e4}.note:last-child{border:0}.note b{display:block;font-size:11px;margin-bottom:5px}.note span{font-size:10px;color:#777;line-height:1.45}.footer{text-align:right;font:500 9px 'JetBrains Mono';color:#aaa;margin-top:12px}@media(max-width:800px){body{padding:12px}.container{padding:18px}.notes{grid-template-columns:1fr 1fr}.note:nth-child(2){border-right:0}.note:nth-child(-n+2){border-bottom:1px solid #e8e8e4}}@media print{body{padding:0;background:white}.container{box-shadow:none;border:0}.toolbar{display:none!important}}
+  </style>
+</head>
+<body>
+<div class="container" id="report-container">
+  <header><div><div class="eyebrow">System design · HLD</div><h1>Teleport architecture</h1><p class="subtitle">Real-time delivery, durable orchestration, and an authoritative operational data model.</p></div><div class="toolbar"><div class="toolbar-actions"><button onclick="copyAsImage(this)">Copy</button><button onclick="downloadPNG()">PNG</button><button onclick="downloadPDF()">PDF</button></div><button class="toolbar-toggle" onclick="this.parentElement.classList.toggle('expanded')" aria-label="Export options">•••</button></div></header>
+  <div class="diagram">
+  <svg viewBox="0 0 1440 780" role="img" aria-labelledby="title desc">
+    <title id="title">Teleport high-level architecture</title><desc id="desc">Customer and driver apps connect to a Next.js application. Stripe webhooks and Prisma transactions update PostgreSQL and a transactional outbox. Kafka starts a Node.js matchmaker coordinated by Temporal, Redis, and Soketi or Pusher realtime channels.</desc>
+    <defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4 0 8Z" fill="#aaa"/></marker><marker id="ab" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4 0 8Z" fill="#222"/></marker><style>.zone{fill:#fff;stroke:#deded9;stroke-width:1}.box{fill:#fff;stroke:#cfcfca;stroke-width:1.2}.core{fill:#fafafa;stroke:#222;stroke-width:1.4}.zh{font:600 10px 'JetBrains Mono',monospace;letter-spacing:1.4px;fill:#999}.h{font:600 13px Inter,sans-serif;fill:#171717}.p{font:400 9px Inter,sans-serif;fill:#858585}.brand{font:700 14px Inter,sans-serif}.chip{fill:#fafafa;stroke:#e4e4df}.ct{font:500 8px Inter,sans-serif;fill:#555}.edge{fill:none;stroke:#aaa;stroke-width:1.4;marker-end:url(#a)}.strong{fill:none;stroke:#222;stroke-width:1.6;marker-end:url(#ab)}.dash{stroke-dasharray:5 5}.lab{font:500 8px 'JetBrains Mono',monospace;fill:#777}</style></defs>
+    <rect width="1440" height="780" fill="#fff"/>
+
+    <!-- connections first -->
+    <path d="M210 208H300" class="strong"/><path d="M210 326H255V238H300" class="strong"/>
+    <path d="M420 388V444" class="edge dash"/><path d="M540 231H615" class="strong"/><path d="M755 231H800" class="strong"/><path d="M940 231H985" class="strong"/>
+    <path d="M1125 231H1198" class="strong"/><path d="M1055 292V457" class="edge"/><path d="M1045 457V292" class="edge"/>
+    <path d="M510 194V106H1280V170" class="edge"/><path d="M1260 170V124H525" class="edge"/>
+    <path d="M1055 292V350H1260V435" class="edge"/><path d="M1260 545V614H140V345" class="edge dash"/>
+
+    <!-- zones -->
+    <rect x="24" y="55" width="220" height="590" rx="12" class="zone"/><text x="44" y="82" class="zh">EXPERIENCE</text>
+    <rect x="270" y="55" width="300" height="590" rx="12" class="zone"/><text x="290" y="82" class="zh">APPLICATION</text>
+    <rect x="595" y="55" width="560" height="590" rx="12" class="zone"/><text x="615" y="82" class="zh">EVENT-DRIVEN MATCHING</text>
+    <rect x="1180" y="55" width="236" height="590" rx="12" class="zone"/><text x="1200" y="82" class="zh">DATA &amp; REALTIME</text>
+
+    <!-- clients -->
+    <rect x="44" y="158" width="166" height="100" rx="9" class="box"/><text x="63" y="190" class="h">Customer app</text><text x="63" y="207" class="p">React 18</text><text x="63" y="238" class="p">Book · pay · track · chat</text>
+    <rect x="44" y="276" width="166" height="100" rx="9" class="box"/><text x="63" y="308" class="h">Driver app</text><text x="63" y="325" class="p">React 18</text><text x="63" y="356" class="p">Offers · routes · fulfillment</text>
+    <rect x="44" y="428" width="166" height="76" rx="9" class="box"/><text x="63" y="463" class="h">Mapbox</text><text x="63" y="480" class="p">Maps · routes · GEO UI</text>
+
+    <!-- application -->
+    <rect x="300" y="146" width="240" height="242" rx="10" class="core"/><text x="322" y="190" class="h" font-size="15">Next.js 14</text><text x="322" y="209" class="p">Web application + tRPC API</text>
+    <g><rect x="322" y="238" width="90" height="31" rx="6" class="chip"/><text x="367" y="258" text-anchor="middle" class="ct"> TypeScript</text><rect x="420" y="238" width="98" height="31" rx="6" class="chip"/><text x="469" y="258" text-anchor="middle" class="ct"> tRPC</text><rect x="322" y="277" width="90" height="31" rx="6" class="chip"/><text x="367" y="297" text-anchor="middle" class="ct"> TanStack</text><rect x="420" y="277" width="98" height="31" rx="6" class="chip"/><text x="469" y="297" text-anchor="middle" class="ct"> Tailwind</text><rect x="322" y="316" width="90" height="31" rx="6" class="chip"/><text x="367" y="336" text-anchor="middle" class="ct">NextAuth</text><rect x="420" y="316" width="46" height="31" rx="6" class="chip"/><text x="443" y="336" text-anchor="middle" class="ct"> Zod</text><rect x="474" y="316" width="44" height="31" rx="6" class="chip"/><text x="496" y="336" text-anchor="middle" class="ct"> Prisma</text></g>
+    <rect x="300" y="444" width="240" height="90" rx="9" class="box"/><text x="322" y="480" class="h">Stripe</text><text x="322" y="497" class="p">Checkout + signed webhooks</text><text x="322" y="514" class="p">Verified · deduplicated</text>
+
+    <!-- matching -->
+    <rect x="615" y="176" width="140" height="110" rx="9" class="box"/><text x="685" y="246" text-anchor="middle" class="h">Transactional outbox</text><text x="685" y="264" text-anchor="middle" class="p">Committed facts only</text>
+    <rect x="800" y="176" width="140" height="110" rx="9" class="box"/><text x="870" y="246" text-anchor="middle" class="h">Apache Kafka</text><text x="870" y="264" text-anchor="middle" class="p">BOOKINGS · replayable</text>
+    <rect x="985" y="176" width="140" height="116" rx="9" class="core"/><text x="1055" y="254" text-anchor="middle" class="h">Matchmaker worker</text><text x="1055" y="273" text-anchor="middle" class="p">Node.js activities</text>
+    <rect x="985" y="457" width="140" height="96" rx="9" class="box"/><text x="1055" y="521" text-anchor="middle" class="h">Redis</text><text x="1055" y="538" text-anchor="middle" class="p">GEO · locks · offers</text>
+
+    <!-- right -->
+    <rect x="1198" y="146" width="200" height="116" rx="9" class="box"/><text x="1218" y="188" class="h">PostgreSQL 16</text><text x="1218" y="207" class="p">Source of truth</text><text x="1218" y="240" class="p">State · audit · outbox · dedup</text>
+    <rect x="1198" y="435" width="200" height="110" rx="9" class="box"/><text x="1218" y="476" class="h">Soketi / Pusher</text><text x="1218" y="495" class="p">Private realtime channels</text><text x="1218" y="524" class="p">Notify → client refetch</text>
+
+    <!-- labels -->
+    <rect x="218" y="196" width="76" height="20" rx="5" fill="#fff"/><text x="256" y="210" text-anchor="middle" class="lab">HTTPS · tRPC</text><rect x="380" y="414" width="117" height="20" rx="5" fill="#fff"/><text x="439" y="428" text-anchor="middle" class="lab">signed webhook</text><rect x="883" y="363" width="170" height="20" rx="5" fill="#fff"/><text x="968" y="377" text-anchor="middle" class="lab">discovery + reservations</text><rect x="1055" y="92" width="153" height="20" rx="5" fill="#fff"/><text x="1132" y="106" text-anchor="middle" class="lab">Prisma transactions</text><rect x="1085" y="596" width="108" height="20" rx="5" fill="#fff"/><text x="1139" y="610" text-anchor="middle" class="lab">notify → refetch</text>
+
+    <!-- Temporal as orchestration rail -->
+    <rect x="615" y="578" width="510" height="43" rx="9" fill="#fafafa" stroke="#cfcfca"/><text x="670" y="597" class="h">Temporal workflows</text><text x="670" y="613" class="p">Durable timers · retries · Signals · timeout reconciliation</text><path d="M1055 553V578" class="edge"/>
+  </svg>
+  </div>
+  <section class="notes"><div class="note"><b>PostgreSQL is authoritative</b><span>Operational state and audit history remain durable.</span></div><div class="note"><b>At-least-once delivery</b><span>Outbox and Kafka make replay safe.</span></div><div class="note"><b>Idempotent commands</b><span>Stable IDs and optimistic versioning prevent duplicates.</span></div><div class="note"><b>Durable orchestration</b><span>Temporal owns matching retries and timers.</span></div></section>
+  <div class="footer">DOCKER COMPOSE · PNPM · TYPESCRIPT</div>
+</div>
+<script>
+const capture=async()=>{const el=document.getElementById('report-container'),r=el.getBoundingClientRect(),pad=24;return html2canvas(document.body,{x:Math.max(0,r.left-pad),y:Math.max(0,r.top-pad),width:r.width+pad*2,height:r.height+pad*2,scale:2,backgroundColor:'#f5f5f3',ignoreElements:e=>e.classList&&e.classList.contains('toolbar')})};
+async function copyAsImage(btn){const c=await capture();c.toBlob(async b=>{await navigator.clipboard.write([new ClipboardItem({'image/png':b})]);const t=btn.textContent;btn.textContent='Copied';setTimeout(()=>btn.textContent=t,1200)})}
+async function downloadPNG(){const c=await capture(),a=document.createElement('a');a.download='teleport-architecture-text-only.png';a.href=c.toDataURL();a.click()}
+async function downloadPDF(){const c=await capture(),{jsPDF}=window.jspdf,p=new jsPDF({orientation:'landscape',unit:'px',format:[c.width,c.height]});p.addImage(c.toDataURL(),'PNG',0,0,c.width,c.height);p.save('teleport-architecture-text-only.pdf')}
+</script>
+</body>
+</html>

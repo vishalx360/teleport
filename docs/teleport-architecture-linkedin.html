@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Teleport — Platform Architecture</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js" integrity="sha384-en/ztfPSRkGfME4KIm05joYXynqzUgbsG5nMrj/xEFAHXkeZfO3yMK8QQ+mP7p1/" crossorigin="anonymous"></script>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#020617;color:#f8fafc;font-family:'JetBrains Mono',monospace;padding:28px}.container{width:min(1460px,100%);margin:auto}.header{display:flex;align-items:center;margin-bottom:18px}.brand{display:flex;align-items:center;gap:14px}.mark{width:44px;height:36px;position:relative}.mark:before,.mark:after{content:"";position:absolute;left:2px;border-left:20px solid transparent;border-right:20px solid transparent}.mark:before{top:0;border-top:14px solid #22d3ee}.mark:after{top:13px;left:11px;border-left-width:11px;border-right-width:11px;border-top:22px solid #3b82f6}.pulse-dot{width:9px;height:9px;border-radius:50%;background:#22d3ee;box-shadow:0 0 18px #22d3ee;animation:pulse 2s infinite}@keyframes pulse{50%{opacity:.45}}h1{font-size:25px;margin:0;letter-spacing:-.04em}.subtitle{color:#94a3b8;font-size:12px;margin:5px 0 0 23px}.toolbar{display:flex;align-items:center;gap:8px;margin-left:auto}.toolbar-actions{display:none;gap:6px}.toolbar.expanded .toolbar-actions{display:flex}.toolbar button{font:500 11px inherit;color:#94a3b8;background:#0f172a;border:1px solid #334155;border-radius:6px;padding:7px 10px;cursor:pointer}.toolbar-toggle{font-size:18px!important;background:transparent!important;border:0!important}.diagram-container{background:rgba(15,23,42,.62);border:1px solid #1e293b;border-radius:16px;padding:16px;overflow:auto;box-shadow:0 24px 80px rgba(0,0,0,.32)}svg{width:100%;min-width:1100px;display:block}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}.card{border:1px solid #1e293b;border-radius:10px;background:rgba(15,23,42,.58);padding:14px 16px}.card h3{font-size:12px;margin:0 0 8px}.card p{font-size:10px;line-height:1.6;color:#94a3b8;margin:0}.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:8px}.cyan{background:#22d3ee}.orange{background:#fb923c}.violet{background:#a78bfa}.footer{text-align:center;color:#475569;font-size:9px;margin-top:12px}@media(max-width:850px){body{padding:12px}.cards{grid-template-columns:1fr}}@media print{body{padding:10px}.toolbar{display:none!important}}
+  </style>
+</head>
+<body>
+<div class="container" id="report-container">
+  <header class="header">
+    <div><div class="brand"><div class="mark"></div><div class="pulse-dot"></div><h1>TELEPORT · PLATFORM ARCHITECTURE</h1></div><p class="subtitle">Real-time local delivery · durable workflows · explicit state ownership</p></div>
+    <div class="toolbar"><div class="toolbar-actions"><button onclick="copyAsImage(this)">📋 Copy</button><button onclick="downloadPNG(this)">🖼️ PNG</button><button onclick="downloadPDF(this)">📄 PDF</button></div><button class="toolbar-toggle" onclick="this.parentElement.classList.toggle('expanded')" aria-label="Export options">⋯</button></div>
+  </header>
+  <main class="diagram-container">
+  <svg viewBox="0 0 1400 810" role="img" aria-labelledby="title desc">
+    <title id="title">Teleport platform architecture</title><desc id="desc">Customers and drivers use a Next.js application. Stripe webhooks update PostgreSQL and a transactional outbox. Kafka starts Temporal-backed matchmaking, which uses Redis and sends realtime notifications through Soketi and Pusher.</desc>
+    <defs>
+      <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#1e293b" stroke-width=".45"/></pattern>
+      <marker id="arrow" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><path d="M0 0L9 3.5 0 7Z" fill="#64748b"/></marker>
+      <marker id="cyanArrow" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><path d="M0 0L9 3.5 0 7Z" fill="#22d3ee"/></marker>
+      <marker id="orangeArrow" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><path d="M0 0L9 3.5 0 7Z" fill="#fb923c"/></marker>
+      <marker id="violetArrow" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><path d="M0 0L9 3.5 0 7Z" fill="#a78bfa"/></marker>
+      <filter id="glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    </defs>
+    <rect width="1400" height="810" rx="12" fill="#020617"/><rect width="1400" height="810" rx="12" fill="url(#grid)"/>
+
+    <!-- arrows behind opaque components -->
+    <g fill="none" stroke-width="2">
+      <path d="M215 170H285" stroke="#22d3ee" marker-end="url(#cyanArrow)"/><path d="M215 300H250V210H285" stroke="#22d3ee" marker-end="url(#cyanArrow)"/>
+      <path d="M500 220H548" stroke="#fb923c" marker-end="url(#orangeArrow)"/><path d="M676 220H718" stroke="#fb923c" marker-end="url(#orangeArrow)"/><path d="M846 220H888" stroke="#fb923c" marker-end="url(#orangeArrow)"/><path d="M1016 220H1058" stroke="#a78bfa" marker-end="url(#violetArrow)"/>
+      <path d="M392 398V455" stroke="#fb7185" stroke-dasharray="6 5" marker-end="url(#arrow)"/>
+      <path d="M450 210V100H1190V170" stroke="#a78bfa" marker-end="url(#violetArrow)"/><path d="M1180 170V100H460" stroke="#a78bfa" marker-end="url(#violetArrow)"/>
+      <path d="M952 270V478" stroke="#34d399" marker-end="url(#arrow)"/><path d="M940 478V270" stroke="#34d399" marker-end="url(#arrow)"/>
+      <path d="M952 270V350H1190V455" stroke="#a78bfa" marker-end="url(#violetArrow)"/>
+      <path d="M1190 565V610H120V230" stroke="#a78bfa" stroke-dasharray="7 5" marker-end="url(#violetArrow)"/>
+      <path d="M952 270V630H1190V585" stroke="#a78bfa" marker-end="url(#violetArrow)"/>
+    </g>
+
+    <!-- zones -->
+    <g font-family="JetBrains Mono">
+      <rect x="20" y="40" width="215" height="620" rx="12" fill="#020617"/><rect x="20" y="40" width="215" height="620" rx="12" fill="rgba(8,51,68,.4)" stroke="#22d3ee" stroke-width="1.5"/>
+      <text x="38" y="66" fill="#22d3ee" font-size="11" font-weight="700" letter-spacing="1">01 · EXPERIENCE</text>
+      <rect x="255" y="40" width="265" height="620" rx="12" fill="#020617"/><rect x="255" y="40" width="265" height="620" rx="12" fill="rgba(6,78,59,.22)" stroke="#34d399" stroke-width="1.5"/>
+      <text x="273" y="66" fill="#34d399" font-size="11" font-weight="700" letter-spacing="1">02 · APPLICATION</text>
+      <rect x="540" y="40" width="535" height="620" rx="12" fill="#020617"/><rect x="540" y="40" width="535" height="620" rx="12" fill="rgba(251,146,60,.055)" stroke="#fb923c" stroke-width="1.5"/>
+      <text x="558" y="66" fill="#fb923c" font-size="11" font-weight="700" letter-spacing="1">03 · EVENT-DRIVEN MATCHMAKING</text>
+      <rect x="1095" y="40" width="285" height="620" rx="12" fill="#020617"/><rect x="1095" y="40" width="285" height="620" rx="12" fill="rgba(76,29,149,.15)" stroke="#a78bfa" stroke-width="1.5"/>
+      <text x="1113" y="66" fill="#a78bfa" font-size="11" font-weight="700" letter-spacing="1">04 · DATA &amp; REALTIME</text>
+    </g>
+
+    <!-- user clients -->
+    <g font-family="JetBrains Mono" text-anchor="middle"><rect x="40" y="115" width="175" height="110" rx="8" fill="#0f172a" stroke="#22d3ee" stroke-width="1.5"/><circle cx="78" cy="153" r="20" fill="#061f2c" stroke="#22d3ee"/><text x="78" y="159" fill="#22d3ee" font-size="14" font-weight="700">⚛</text><text x="142" y="150" fill="white" font-size="12" font-weight="700">Customer App</text><text x="142" y="169" fill="#94a3b8" font-size="8">React 18</text><text x="127" y="201" fill="#22d3ee" font-size="8">book · pay · track · chat</text>
+    <rect x="40" y="245" width="175" height="110" rx="8" fill="#0f172a" stroke="#22d3ee" stroke-width="1.5"/><circle cx="78" cy="283" r="20" fill="#061f2c" stroke="#22d3ee"/><text x="78" y="289" fill="#22d3ee" font-size="14" font-weight="700">⚛</text><text x="142" y="280" fill="white" font-size="12" font-weight="700">Driver App</text><text x="142" y="299" fill="#94a3b8" font-size="8">React 18</text><text x="127" y="331" fill="#22d3ee" font-size="8">offers · route · fulfill</text>
+    <rect x="40" y="405" width="175" height="85" rx="8" fill="#0f172a" stroke="#94a3b8"/><circle cx="80" cy="447" r="19" fill="#2563eb"/><text x="80" y="452" fill="white" font-size="13">⌖</text><text x="147" y="442" fill="white" font-size="12" font-weight="700">Mapbox</text><text x="147" y="460" fill="#94a3b8" font-size="8">maps · routes · GEO UI</text></g>
+
+    <!-- app -->
+    <g font-family="JetBrains Mono"><rect x="285" y="115" width="215" height="283" rx="10" fill="#0f172a" stroke="#34d399" stroke-width="1.7"/><circle cx="328" cy="160" r="23" fill="#000" stroke="#fff"/><text x="328" y="168" fill="white" text-anchor="middle" font-size="22" font-weight="700">N</text><text x="365" y="156" fill="white" font-size="13" font-weight="700">Next.js 14</text><text x="365" y="175" fill="#94a3b8" font-size="9">Application + tRPC API</text>
+    <text x="305" y="210" fill="#34d399" font-size="8" font-weight="700">WEB · API · COMMAND BOUNDARY</text>
+    <g font-size="8" font-weight="600"><rect x="305" y="228" width="84" height="30" rx="5" fill="#172554" stroke="#3b82f6"/><text x="347" y="247" fill="#93c5fd" text-anchor="middle">TS TypeScript</text><rect x="397" y="228" width="83" height="30" rx="5" fill="#312e81" stroke="#818cf8"/><text x="439" y="247" fill="#c7d2fe" text-anchor="middle">↔ tRPC</text><rect x="305" y="266" width="84" height="30" rx="5" fill="#3f2d07" stroke="#fbbf24"/><text x="347" y="285" fill="#fde68a" text-anchor="middle">◒ TanStack</text><rect x="397" y="266" width="83" height="30" rx="5" fill="#083344" stroke="#22d3ee"/><text x="439" y="285" fill="#a5f3fc" text-anchor="middle">≈ Tailwind</text><rect x="305" y="304" width="84" height="30" rx="5" fill="#111827" stroke="#f8fafc"/><text x="347" y="323" fill="#f8fafc" text-anchor="middle">◉ NextAuth</text><rect x="397" y="304" width="83" height="30" rx="5" fill="#172554" stroke="#60a5fa"/><text x="439" y="323" fill="#bfdbfe" text-anchor="middle">△ Zod</text><rect x="305" y="342" width="175" height="30" rx="5" fill="#1e1b4b" stroke="#a78bfa"/><text x="393" y="361" fill="#ddd6fe" text-anchor="middle">◢ Prisma ORM</text></g>
+    <rect x="285" y="455" width="215" height="105" rx="9" fill="#0f172a" stroke="#fb7185" stroke-width="1.5"/><rect x="305" y="477" width="43" height="43" rx="9" fill="#635bff"/><text x="327" y="507" fill="white" text-anchor="middle" font-size="24" font-weight="700">S</text><text x="366" y="492" fill="white" font-size="14" font-weight="700">Stripe</text><text x="366" y="511" fill="#94a3b8" font-size="8">Checkout</text><text x="305" y="542" fill="#fb7185" font-size="8">signed + deduplicated webhooks</text></g>
+
+    <!-- event path -->
+    <g font-family="JetBrains Mono" text-anchor="middle"><rect x="548" y="165" width="128" height="105" rx="8" fill="#0f172a" stroke="#fb923c" stroke-width="1.5"/><text x="612" y="198" fill="#fb923c" font-size="20">▤</text><text x="612" y="225" fill="white" font-size="11" font-weight="700">Transactional</text><text x="612" y="242" fill="white" font-size="11" font-weight="700">Outbox</text><text x="612" y="258" fill="#94a3b8" font-size="7">same DB transaction</text>
+    <rect x="718" y="165" width="128" height="105" rx="8" fill="#0f172a" stroke="#fb923c" stroke-width="1.5"/><text x="782" y="199" fill="#fb923c" font-size="21">⌘</text><text x="782" y="225" fill="white" font-size="11" font-weight="700">Apache Kafka</text><text x="782" y="244" fill="#94a3b8" font-size="8">BOOKINGS topic</text><text x="782" y="259" fill="#94a3b8" font-size="7">replayable events</text>
+    <rect x="888" y="165" width="128" height="105" rx="8" fill="#0f172a" stroke="#34d399" stroke-width="1.5"/><polygon points="923,191 943,180 963,191 963,215 943,226 923,215" fill="none" stroke="#65a30d" stroke-width="3"/><text x="943" y="209" fill="#84cc16" font-size="15" font-weight="700">JS</text><text x="952" y="244" fill="white" font-size="11" font-weight="700">Matchmaker</text><text x="952" y="259" fill="#94a3b8" font-size="8">Node.js worker</text>
+    <rect x="1058" y="165" width="128" height="105" rx="8" fill="#0f172a" stroke="#a78bfa" stroke-width="1.5"/><text x="1122" y="201" fill="#a78bfa" font-size="23">◎</text><text x="1122" y="227" fill="white" font-size="11" font-weight="700">Temporal</text><text x="1122" y="244" fill="#94a3b8" font-size="8">durable workflows</text><text x="1122" y="259" fill="#94a3b8" font-size="7">timers · retry · Signals</text>
+    <rect x="888" y="478" width="128" height="105" rx="8" fill="#0f172a" stroke="#34d399" stroke-width="1.5"/><path d="M927 510h50l-7 15h-50z" fill="#dc2626"/><text x="952" y="549" fill="white" font-size="12" font-weight="700">Redis</text><text x="952" y="566" fill="#94a3b8" font-size="7">GEO · locks · offers</text></g>
+
+    <!-- data -->
+    <g font-family="JetBrains Mono" text-anchor="middle"><rect x="1115" y="115" width="245" height="115" rx="9" fill="#0f172a" stroke="#a78bfa" stroke-width="1.5"/><text x="1160" y="169" fill="#60a5fa" font-size="35">♞</text><text x="1260" y="156" fill="white" font-size="13" font-weight="700">PostgreSQL 16</text><text x="1260" y="177" fill="#a78bfa" font-size="8">AUTHORITATIVE SOURCE OF TRUTH</text><text x="1238" y="205" fill="#94a3b8" font-size="8">bookings · audit · outbox · dedup</text>
+    <rect x="1115" y="455" width="245" height="110" rx="9" fill="#0f172a" stroke="#a78bfa" stroke-width="1.5"/><text x="1160" y="507" fill="#22d3ee" font-size="27">✦</text><text x="1260" y="494" fill="white" font-size="13" font-weight="700">Soketi / Pusher</text><text x="1260" y="515" fill="#a78bfa" font-size="8">PRIVATE REALTIME CHANNELS</text><text x="1238" y="543" fill="#94a3b8" font-size="8">best effort notify → client refetch</text></g>
+
+    <!-- labels -->
+    <g font-family="JetBrains Mono" font-size="8"><rect x="225" y="176" width="78" height="19" rx="4" fill="#020617" stroke="#22d3ee"/><text x="264" y="189" fill="#22d3ee" text-anchor="middle">HTTPS · tRPC</text><rect x="965" y="361" width="176" height="19" rx="4" fill="#020617" stroke="#34d399"/><text x="1053" y="374" fill="#34d399" text-anchor="middle">driver discovery + reservations</text><rect x="1035" y="84" width="155" height="19" rx="4" fill="#020617" stroke="#a78bfa"/><text x="1112" y="97" fill="#a78bfa" text-anchor="middle">idempotent DB transitions</text><rect x="1000" y="600" width="127" height="19" rx="4" fill="#020617" stroke="#a78bfa"/><text x="1063" y="613" fill="#a78bfa" text-anchor="middle">notify → refetch</text></g>
+
+    <!-- reliability strip / legend outside zones -->
+    <rect x="20" y="690" width="1360" height="92" rx="10" fill="#0f172a" stroke="#334155"/><text x="42" y="717" fill="#64748b" font-family="JetBrains Mono" font-size="9" font-weight="700">RELIABILITY CONTRACT</text>
+    <g font-family="JetBrains Mono" text-anchor="middle"><text x="200" y="747" fill="#a78bfa" font-size="18">▣</text><text x="200" y="765" fill="#cbd5e1" font-size="9">PostgreSQL is authoritative</text><text x="515" y="747" fill="#fb923c" font-size="18">⇥</text><text x="515" y="765" fill="#cbd5e1" font-size="9">At-least-once event delivery</text><text x="835" y="747" fill="#34d399" font-size="18">↻</text><text x="835" y="765" fill="#cbd5e1" font-size="9">Idempotent commands + versioning</text><text x="1160" y="747" fill="#a78bfa" font-size="18">◷</text><text x="1160" y="765" fill="#cbd5e1" font-size="9">Durable timers + workflow retries</text></g>
+    <text x="1360" y="801" fill="#475569" text-anchor="end" font-family="JetBrains Mono" font-size="8">Docker Compose · pnpm · TypeScript</text>
+  </svg>
+  </main>
+  <section class="cards"><article class="card"><h3><span class="dot cyan"></span>Source of truth</h3><p>PostgreSQL owns booking state, audit history, deduplication, and the transactional outbox.</p></article><article class="card"><h3><span class="dot orange"></span>Durable execution</h3><p>Kafka carries committed facts. Temporal makes matching retries, offer expiry, and recovery restart-safe.</p></article><article class="card"><h3><span class="dot violet"></span>Recoverable realtime</h3><p>Redis accelerates coordination; Soketi/Pusher only prompts clients to refetch authoritative state.</p></article></section>
+  <footer class="footer">TELEPORT · production-oriented reference architecture · 2026</footer>
+</div>
+<script>
+  const capture=async()=>{const el=document.getElementById('report-container'),r=el.getBoundingClientRect(),pad=32;return html2canvas(document.body,{x:Math.max(0,r.left-pad),y:Math.max(0,r.top-pad),width:r.width+pad*2,height:r.height+pad*2,scale:2,backgroundColor:'#020617',ignoreElements:e=>e.classList&&e.classList.contains('toolbar')})};
+  async function copyAsImage(btn){const c=await capture();c.toBlob(async b=>{await navigator.clipboard.write([new ClipboardItem({'image/png':b})]);const old=btn.textContent;btn.textContent='✓ Copied';setTimeout(()=>btn.textContent=old,1400)})}
+  async function downloadPNG(){const c=await capture(),a=document.createElement('a');a.download='teleport-platform-architecture.png';a.href=c.toDataURL('image/png');a.click()}
+  async function downloadPDF(){const c=await capture(),img=c.toDataURL('image/png'),{jsPDF}=window.jspdf,pdf=new jsPDF({orientation:'landscape',unit:'px',format:[c.width,c.height]});pdf.addImage(img,'PNG',0,0,c.width,c.height);pdf.save('teleport-platform-architecture.pdf')}
+</script>
+</body>
+</html>
